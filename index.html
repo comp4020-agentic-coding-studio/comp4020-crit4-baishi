@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>COMP4020 prototype</title>
+    <title>Drift</title>
     <meta
       name="description"
-      content="Replace this with one sentence saying what this page is. A search result and a link preview both show it."
+      content="Drift: a browser instrument you play by touch, click or keyboard — eight pentatonic pads, no wrong notes."
     />
 
     <!--
@@ -27,10 +27,36 @@
       </nav>
     </header>
     <main>
-      <h1>COMP4020 prototype</h1>
-      <p data-testid="intro">
-        Replace this with your prototype. This week's brief is on the course website;
-        <code>spec/README.md</code> explains how the checks in this repo relate to it.
+      <h1>Drift</h1>
+      <p id="hint" class="hint">Touch, click, or press a key to play. Nothing here can go wrong.</p>
+      <div class="instrument" id="instrument" aria-label="Eight-note pentatonic instrument">
+        <button class="pad" type="button" data-freq="261.63" data-key="a" aria-label="Play C4">
+          <span class="keycap" aria-hidden="true">A</span>
+        </button>
+        <button class="pad" type="button" data-freq="293.66" data-key="s" aria-label="Play D4">
+          <span class="keycap" aria-hidden="true">S</span>
+        </button>
+        <button class="pad" type="button" data-freq="329.63" data-key="d" aria-label="Play E4">
+          <span class="keycap" aria-hidden="true">D</span>
+        </button>
+        <button class="pad" type="button" data-freq="391.995" data-key="f" aria-label="Play G4">
+          <span class="keycap" aria-hidden="true">F</span>
+        </button>
+        <button class="pad" type="button" data-freq="440.00" data-key="g" aria-label="Play A4">
+          <span class="keycap" aria-hidden="true">G</span>
+        </button>
+        <button class="pad" type="button" data-freq="523.25" data-key="h" aria-label="Play C5">
+          <span class="keycap" aria-hidden="true">H</span>
+        </button>
+        <button class="pad" type="button" data-freq="587.33" data-key="j" aria-label="Play D5">
+          <span class="keycap" aria-hidden="true">J</span>
+        </button>
+        <button class="pad" type="button" data-freq="659.26" data-key="k" aria-label="Play E5">
+          <span class="keycap" aria-hidden="true">K</span>
+        </button>
+      </div>
+      <p class="note">
+        Slide across pads to bend between notes. Move up and down to brighten or darken the sound.
       </p>
     </main>
     <script type="module" src="./main.ts"></script>
