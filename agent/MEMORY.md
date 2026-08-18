@@ -1,0 +1,590 @@
+# MEMORY
+
+Durable self-knowledge, curated run by run; ephemeral state belongs in
+`now.md`, not here.
+
+## Environment
+
+- `agent-browser` needs Chrome installed once per environment
+  (`agent-browser install`) and, in this sandboxed container, the Chrome
+  sandbox itself doesn't work — launches fail with "No usable sandbox!"
+  unless `AGENT_BROWSER_ARGS="--no-sandbox"` is exported first. Command
+  syntax is `agent-browser set viewport <w> <h>`, not `agent-browser
+  viewport <w> <h>`. That `export` (like any env var) does not persist
+  between separate Bash tool calls — only the working directory does —
+  so it has to be set inline in the same command string as the
+  `agent-browser` calls that need it, every time, not as a one-off prior
+  command.
+- `mise install` refuses to run against an untrusted `config.local.toml`
+  the first time in a fresh environment — run `mise trust
+  <path-to-config.local.toml>` once, then install proceeds normally.
+- In this sandboxed container any pnpm command that triggers a deps
+  reconciliation (`check`, `install`, `preview`, `dev`) can abort with
+  `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY` (it wants to confirm
+  purging `node_modules` interactively and there's no TTY). Prefix with
+  `CI=true` — `CI=true pnpm preview` — rather than investigating further.
+- The installed `agent-browser` has grown two native commands beyond what
+  earlier entries below assume: `agent-browser a11y [url] --json` runs
+  axe-core directly (no more need for the CDN-injection dance described
+  further down), and `agent-browser vitals [url] --json` reports Core Web
+  Vitals (LCP/CLS/TTFB/FCP/INP) plus React hydration info. Confirmed
+  working on assignment-1 (2026-08-14): `a11y` matched the earlier
+  CDN-injected sweep's 0-violations result at both marking viewports, and
+  `vitals` gave a genuinely new signal (CLS score) the manual
+  `performance.getEntriesByType` snippet never captured. Prefer these
+  native commands over the manual techniques logged below when starting a
+  fresh a11y/perf pass; the manual entries stay as fallback in case a
+  future environment lacks them. `inp` came back `null` even after a real
+  keyboard-driven interaction sequence (`focus` + `press`) — plausibly the
+  synthetic/CDP interaction path doesn't feed the INP buffer; not worth
+  chasing further for a single-page static site.
+- `agent-browser -p ios ...` (the touch-emulation provider) fails outright in
+  this sandboxed container: `xcrun simctl` isn't present, since the iOS
+  simulator needs an actual macOS/Xcode host. Confirmed directly
+  (`agent-browser -p ios device list` → "No such file or directory"), not
+  inferred — don't spend a future run's budget retrying touch-specific
+  emulation here expecting a different result; it needs a different host
+  entirely. `agent-browser network` also still has no request-delay/throttle
+  primitive (only `route --abort`/`--body`), confirmed again on assignment-1,
+  so a true slow-connection test remains out of reach without extra tooling
+  beyond the CLI.
+- `agent-browser press <key> --hold <ms>` does not reliably sustain the key
+  down for the requested duration in this sandboxed container — confirmed on
+  crit-4 (2026-08-19): a background `press d --hold 2000` followed by a
+  mid-hold `eval` reading `document.activeElement`/a DOM state flag always
+  saw the released state, as if the hold hadn't happened, even though the
+  same page's own `keydown`/`keyup` listeners were verified correct by other
+  means. Don't trust `--hold` to prove or disprove a press-and-sustain
+  interaction (a synth pad held for a chord, a game key held to move). The
+  reliable way to test real sustain: `agent-browser eval
+  "document.dispatchEvent(new KeyboardEvent('keydown', {key: 'x', bubbles:
+  true}))"`, do whatever mid-hold check is needed, then dispatch the matching
+  `keyup` the same way — this actually held the key logically down between
+  the two `eval` calls when `--hold` did not.
+- `pnpm dlx lighthouse <url> --preset=desktop --chrome-flags="--headless
+  --no-sandbox"` needs `CHROME_PATH` set explicitly in this sandboxed
+  container — lighthouse's own `chrome-launcher` can't find a system Chrome
+  (there isn't one), and fails with "The CHROME_PATH environment variable
+  must be set" otherwise. Point it at the Chrome `agent-browser install`
+  already put down:
+  `CHROME_PATH=$(find ~/.agent-browser/browsers -maxdepth 1 -name 'chrome-*'
+  | sort -V | tail -1)/chrome`. Also run it from inside the target repo, not
+  `/tmp` or elsewhere — `pnpm dlx` needs `mise`'s per-directory pnpm version
+  resolution, which fails with "No version is set for shim: pnpm" outside a
+  directory that has one configured.
+
+## Working patterns that held up
+
+- The doctrine's "no JS" constraint recurs whenever a crit spec bans
+  scripting but the aesthetic being chased (marquees, blinking, live
+  counters) traditionally used it. CSS alone reproduces these
+  convincingly — `@keyframes` + `translateX` for scrolling banners,
+  `repeating-linear-gradient` for hazard stripes, styled `<span>` digits
+  for a fake counter — and it's worth reaching for that before any
+  deprecated tag (`<marquee>`, `<blink>`) even when the brief's own
+  examples suggest them: deprecated markup renders inconsistently and
+  isn't a foundation worth building six pages on.
+- A retro site "logo" wants visually to be a big heading at the top of
+  every page, but the spec's own invariant checks (and most sane a11y
+  practice) expect exactly one `<h1>` per page — the page's actual
+  content heading. Demote the logo to a styled `<p>` (e.g.
+  `class="wordmark"`) rather than dropping the invariant or the content
+  heading. This will recur any week a "signature banner" look is wanted.
+- The instruction to never guess/generate URLs not directly in service of
+  programming help extends naturally to in-repo content decisions, not
+  just chat replies: an old-web "links/webring" page that would normally
+  hyperlink out to museums/archives instead named institutions as plain
+  text and only hyperlinked back into the site's own pages. Treat this as
+  the default whenever a crit's content genuinely wants outbound links —
+  plain-text citation over a guessed/unverifiable href.
+- Commit granularity: one commit per page/concern (CSS+home together,
+  then one commit per subsequent page) reads far better in the process
+  evidence than one dump, even when all pages are authored in one
+  sitting. Keep doing this.
+- Run `pnpm check` before committing, not after — every stylelint/vitest
+  fix this run happened pre-commit, so the commit history shows a
+  consistently green state rather than a fix-up trail. `PROCESS.md`
+  should say so honestly (no fabricated red→green commit pairs) rather
+  than manufacture a broken-then-fixed diff that didn't happen.
+- The template's `spec/README.md` is explicit that turning the week's own
+  published spec into tests is the agent's work, not the template's — the
+  shipped `invariants.test.ts` only covers site-agnostic basics. Check
+  every run whether a crit-specific `spec/<crit>.test.ts` exists yet for
+  the checkable lines a test actually can assert (e.g. "no JavaScript",
+  "pages reachable from home"); if it's missing, writing it is a genuine,
+  well-scoped deepening task, not scope creep.
+- Before trusting a stale `now.md` claim like "not yet pushed," run
+  `git fetch` and compare against `origin/main` directly — a prior run's
+  note can lag what actually happened (this repo's C1 work turned out
+  already pushed despite the note saying otherwise).
+- To run a real accessibility check without adding a permanent
+  dependency: serve `dist/` locally, open a page with `agent-browser`,
+  and `agent-browser eval` a snippet that appends a `<script src="https://
+  cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js">` and awaits
+  its `onload`, then a second `eval` calling `axe.run().then(r =>
+  JSON.stringify(r.violations...))`. Network access from the browser
+  works fine in this sandboxed environment. This is a one-off audit, not
+  the same thing as wiring axe-core as a permanent CI sensor (the
+  template's `CLAUDE.md` explicitly leaves that as separate, later work)
+  — reach for the CDN-injection version first when the question is just
+  "does this page currently pass," and only add a real devDependency +
+  test if the week's spec asks for a standing sensor.
+- `PROCESS.md`'s "moments that mattered" needs to be re-read against
+  `git log` every run, not just extended when new work happens — a prior
+  run added a genuinely good commit (`spec/crit-1.test.ts`) but never
+  updated `PROCESS.md` to cite it, so the reading-guide silently fell
+  behind the history it's supposed to map. Check for this drift
+  specifically: does every notable commit since the last `PROCESS.md`
+  edit have a citation, not just the newest one.
+- The crit-1 repo has an in-repo `agent/` directory (`agent/doctrine.md`,
+  `agent/MEMORY.md`, `agent/now.md`) that mirrors this external memory
+  system, committed under messages like "memory: tick snapshot
+  <timestamp>" with author `Baishi <baishi@comp4020.anu.edu.au>` — the
+  same identity this session commits as. Don't mistake these for a prior
+  run's own edits, and never touch `agent/` directly: the doctrine is
+  explicit that `agent/` is harness-owned, and the most consistent read
+  is that a wrapper around the `claude --print` invocation (not the model)
+  writes these snapshots after a run finishes. Only ever write to the
+  real `memory/now.md` and `memory/MEMORY.md` outside the repo.
+- The CDN-injected axe-core sweep (see the entry above) is worth re-running
+  whenever a repo's markup changes, not filed away as "already ran once for
+  this crit": on crit-2, a run that found the repo otherwise fully finished
+  still ran it fresh and it caught a real `region` violation the prior run's
+  own build never had checked — a `.hero` block (the page's actual lede
+  content: address, hours, phone) sitting between `</header>` and `<main>`
+  on the home page only, unlike every other page where the equivalent
+  content already opened inside `<main>`. A single-page structural
+  inconsistency like this is exactly the kind of thing that's invisible to
+  `pnpm check` (no invariant asserts landmark coverage) and easy to miss by
+  eye since the page still renders and reads fine — the tool is what caught
+  it, not a prose re-read.
+- When a deepening pass turns up nothing to change (checks all green, a
+  close CSS re-scrutiny and a full line-by-line prose reread of every
+  page find no defects), that is a legitimate outcome, not a failure to
+  find work — record what was checked and move on rather than inventing
+  cosmetic changes (e.g. a favicon, or editing the template's generic
+  `README.md`) just to have a diff. Manufactured busywork reads worse in
+  the process evidence than an honest "verified, nothing needed" note.
+- `pnpm outdated` / `pnpm audit` is a genuinely different deepening angle
+  from the prose/CSS/a11y passes already tried, but for a static-HTML
+  crit that's already finished, don't chase it reflexively: `pnpm audit`
+  coming back clean is worth a quick check every so often, but every
+  entry `pnpm outdated` lists for this template (oxlint, @types/jsdom,
+  @types/node, jsdom, typescript) is a *major* version bump, not a patch
+  — bumping build tooling this far from cutoff carries real risk
+  (frozen-lockfile CI install, a major TS version's stricter checks) for
+  zero benefit to the deployed static site. Evaluating it and choosing
+  not to bump is the legitimate outcome here, same as the CSS/prose
+  passes finding nothing — don't manufacture a dependency-bump commit
+  just to have touched something.
+  **Update (assignment-1, 2026-08-12):** don't stop at "every `pnpm
+  outdated` entry is major, so there's nothing safe to do" — that was true
+  of the *pinned* deps but not of what's reachable through them. `pnpm
+  audit` on this repo found 9 real vulnerabilities (4 high, 5 moderate) in
+  transitive dev-tooling deps (`undici` via `jsdom`; `postcss`/`nanoid`/
+  `js-yaml`/`fast-uri` via `stylelint`'s toolchain), and a plain `pnpm
+  update` — which only moves versions *within* the ranges `package.json`
+  already declares, touching no pin — bumped just `oxlint` and `vite` and
+  cleared every one of them, `pnpm check` still green after. The two
+  checks answer different questions: `pnpm outdated` tells you what's safe
+  to *pin higher* (often nothing, near cutoff); `pnpm audit` plus a plain
+  `pnpm update` tells you what's already fixable *without* touching a pin
+  at all. Always try the in-range update first when audit finds something
+  — it's categorically lower-risk than a major bump and may well clear the
+  finding outright, as it did here. Written up as a `CLAUDE.md`
+  entry + a genuine third `PROCESS.md` moment on assignment-1, which
+  otherwise had only two — worth remembering that the assignment's own
+  spec (unlike a crit's) explicitly wants three or four moments, not
+  fewer, so a legitimate new finding like this is worth writing up as a
+  moment even on a build that already reads as "finished."
+- A performance/console spot-check is another distinct, legitimate
+  deepening angle (separate from the a11y pass already done): serve
+  `dist/` with `CI=true pnpm preview --port <p>`, then per page
+  `agent-browser open` + `agent-browser console` (empty output = no
+  errors) + `agent-browser eval
+  "JSON.stringify(performance.getEntriesByType('navigation'/'resource')...)"`
+  for load timing and transfer sizes. For a plain-HTML/CSS crit this is
+  fast (~50ms DOMContentLoaded, ~2KB per page) and found nothing to fix.
+  One artefact worth knowing about but *not* worth chasing: the browser's
+  automatic `/favicon.ico` probe 404s because no favicon exists and none
+  is linked in any `<head>` — this doesn't fail any check and isn't a
+  broken link the site declares, so per the "don't manufacture busywork"
+  lesson above, leave it rather than adding a favicon just to clear it.
+- `agent-browser` has no print-media emulation (`set media` only takes
+  dark/light/reduced-motion) — for a reader/print-view style proof-read,
+  use `agent-browser read <url> --outline` (heading hierarchy only, good
+  for spotting a missing/duplicate `<h1>` or skipped levels) and plain
+  `agent-browser read <url>` (stripped-down reader-mode text extraction)
+  instead. One gotcha: that extraction renders named HTML entities
+  without their trailing semicolon in its markdown conversion
+  (`&rsquos`, `&mdash`) even when the source has them correctly
+  (`&rsquo;`, `&mdash;`) — always grep the actual `.html` source before
+  treating a missing-semicolon entity as a real bug, it's very likely
+  just the read tool's cosmetic rendering.
+- `agent-browser screenshot`'s second positional argument is the
+  destination *path*, not a flag slot — the full-page flag is
+  `--full`/`-f`, not `--full-page`. Passing `--full-page` doesn't error;
+  it's silently parsed as the path, so the screenshot writes to a
+  literally-named `--full-page` file in the current directory instead of
+  where you intended. `git status` caught this as a stray untracked file
+  before it could be committed. Check the flag name before scripting
+  screenshot loops.
+- Before treating a both-viewport visual screenshot pass as a fresh
+  deepening angle, check whatever scratch directory earlier runs used
+  (e.g. `/tmp/shots/`, if that path recurs) for timestamped files first —
+  this repo's crit-1 already had matching desktop/mobile screenshots of
+  all six pages from two prior runs (2026-07-29, 2026-07-30) sitting in
+  `/tmp/shots/`, meaning a run that tries this "new" angle without
+  checking is just repeating work, not deepening. `now.md` and
+  `PROCESS.md` don't record every check that was run (only what changed
+  the site), so `/tmp` scratch artefacts are sometimes the only trace of
+  a prior angle already tried.
+- `pnpm dlx html-validate dist/*.html` is a genuinely distinct one-off
+  deepening angle from the a11y/performance/CSS/prose passes above, but
+  its default preset's `doctype-style` and `void-style` rules assume an
+  older HTML-authoring convention (uppercase `<!DOCTYPE html>`, no
+  self-closing void elements) that is the *opposite* of this template's
+  already-consistent modern style (lowercase doctype, self-closing
+  `<meta/>`/`<br/>`/`<hr/>`, matching Vite's own output). Don't treat
+  those two rule categories as defects to fix — "adopting" them would
+  make the markup less internally consistent, not more correct. Do
+  check whether any *other* rule category fired (duplicate IDs, missing
+  alts, invalid nesting) — that would be a real finding; on this repo
+  none did, which is itself useful confirmation of structural soundness.
+  It's still worth re-running per repo, not treated as "already checked
+  once": on crit-2 the same tool caught a real `tel-non-breaking` finding
+  (a phone number that could line-wrap mid-digit-group) that crit-1 never
+  had a phone number to trigger — fixed with `&nbsp;` between the digit
+  groups. On assignment-1, only the same two expected non-issue categories
+  fired again and nothing else — third repo running with this exact
+  clean-except-doctype/void-style pattern, and likewise a clean axe-core
+  sweep (0 violations) on assignment-1's single page. Both are cheap enough
+  to run fresh per repo rather than trust as "probably still clean."
+
+- Real keyboard interaction testing is a distinct deepening angle from
+  axe-core's static audit: `CI=true pnpm preview`, `agent-browser open`,
+  then repeated `agent-browser press Tab` + `eval
+  "document.activeElement..."` to read tag/text/href/outline off each
+  focused element in turn. Checks two things static analysis can't: tab
+  order actually matches visual/logical order, and every focused element
+  gets a *visible* focus indicator (grep `styles.css` for `outline:
+  none` resets first — if there are none, the browser's default
+  `outline: auto` covers anything a custom `:focus-visible` rule
+  doesn't). On crit-1 this held cleanly at both viewports with no
+  console errors — reach for it once static a11y/HTML-validation tools
+  are exhausted and there's still deepen-phase budget left.
+- Two deepening angles distinct from the tab-order walk already logged above:
+  (1) **resize mid-interaction** — set the interaction to a non-trivial state,
+  then `agent-browser set viewport` straight to the other marking size
+  *without reloading*, and check state/layout survive (no console errors, a
+  screenshot at the new size still looks right). This is exactly what the
+  assignment-1 spec's artefact HD band names ("holds up under... a resize
+  mid-interaction"), and it's a real live check, not inferable from reading
+  CSS. (2) **actual keyboard actuation of the control**, not just tab order —
+  focus the element and send the real keys that operate it (`ArrowRight`,
+  `Home`, `End` for a range input) and confirm the on-screen state tracks
+  exactly as a pointer drag would. Tab-order/outline-visibility checks (see
+  above) only prove the control is *reachable*; this proves it's *usable*.
+  On assignment-1 both passed cleanly with a native `<input type="range">` —
+  worth noting as a finding in itself: using the native control instead of a
+  custom widget bought real keyboard support for free, with nothing to test
+  against regressing since the browser guarantees it.
+- `agent-browser screenshot <selector> <path>` (a positional selector before
+  the path, not a flag) crops the screenshot to one element — use this to put
+  two states of the same visual element side by side (e.g. a slider-driven
+  drawing at stroke count 10 vs 16) when a full-page screenshot buries the
+  comparison in unrelated page chrome. This is how assignment-1's over-
+  elaboration phase (visibly denser leg-ticks and a faint duplicate outline
+  from 11 strokes to 16) was actually compared against the sweet-spot phase,
+  rather than eyeballed from two separate full-page captures.
+- A `prefers-reduced-motion` CSS guard is worth observing live, not just
+  reading in source: `agent-browser eval
+  "getComputedStyle(document.querySelector(selector)).animationName"`
+  before and after `agent-browser set media reduced-motion` (then `set
+  media no-preference` to reset). Code review alone can't catch a typo'd
+  media query or a selector that doesn't actually match the animated
+  element — this closed that gap on crit-1's marquee (`scroll-left` →
+  `none` under the emulated preference, confirmed live rather than
+  assumed from the CSS).
+
+- `pnpm dlx linkinator ./dist --silent` against a fresh `pnpm build` is the
+  local equivalent of the CI links sensor (named in this repo's `CLAUDE.md`)
+  and is a genuinely distinct check from `spec/crit-1.test.ts`'s reachability
+  assertions — it's an actual crawl of the built HTML/asset graph rather than
+  a DOM-string assertion. On crit-1 it scanned all 7 built files/assets with
+  zero broken links. One quirk: `--silent` combined with `&&`-chaining after
+  a separately-redirected `pnpm build` produced a bare exit-1 with no visible
+  output in this sandbox — dropping `--silent` (or running build and
+  linkinator as separate commands) showed the real, clean crawl output. Don't
+  read a silent-flag exit code as a real failure without re-running verbose.
+
+- To find an organisation's real subpage URLs without guessing (a guessed
+  `/contact` on crit-2's `megalo.org` 404'd, the real path was `/contact-us`),
+  open the live site with `agent-browser` and `eval` a snippet enumerating
+  every `<a>`'s `href` + text from the actual DOM
+  (`Array.from(document.querySelectorAll('a')).map(a => a.href + ' | ' +
+  a.textContent.trim())`), then read the real path off the result. This is
+  mechanical discovery from the source, not a second guess.
+- A verified real street address fed into OpenStreetMap's own
+  `/search?query=<address>` endpoint (e.g.
+  `https://www.openstreetmap.org/search?query=21+Wentworth+Avenue%2C+Kingston+ACT+2604`)
+  is a legitimate wayfinding link, distinct from the "never guess a URL"
+  constraint — it's built from data already verified against the real
+  organisation's own site, through OSM's real, standard search route, not a
+  fabricated destination.
+- `stylelint`'s `no-descending-specificity` fires when a later-declared
+  selector has lower specificity than an earlier one it doesn't share an
+  ancestor with (e.g. `.tier ul` declared before `nav[aria-label="Primary"]
+  ul`, or `.footer-social a` before `nav[aria-label="Primary"] a`). The fix
+  that scales as a stylesheet grows is giving the offending rule its own
+  unqualified class (`.tier-benefits` instead of `.tier ul`;
+  `.footer-social { display: flex; gap: 1rem }` instead of a `> a { margin }`
+  child selector) rather than reordering the file — reordering only survives
+  until the next unrelated addition changes the interleaving again.
+- The choice of whether to convert a crit to Astro (now the course default)
+  is worth re-making per crit, not a standing policy either way: on crit-2,
+  no tested `stack` conversion skill was present in that session's available
+  skills, and the brief was six fixed informational pages with no
+  interactivity — nothing Astro's content collections/componentisation would
+  earn back against the real conversion risk (base path, the CI link-check
+  patch) for a hand conversion. Re-evaluate this each time rather than
+  assuming last run's answer still holds.
+
+- When verifying a `transform`-based positional fix on an SVG element live
+  (e.g. an intentional `translate(dx, dy)` offset to stop two strokes
+  rendering on top of each other), don't check with `getBBox()` — by
+  spec it returns the element's bounding box in its own user space
+  *before* its own `transform` is applied, so two identically-shaped
+  elements will report identical bboxes even when one is genuinely
+  offset on screen. Use `getBoundingClientRect()` instead, which
+  reflects the full rendered position. Learned on assignment-1 chasing
+  what looked like a fix that "didn't apply" when it actually had.
+- An SVG illustration authored by hand (coordinates typed in rather than
+  traced/exported) can pass every code-level check and still read as the
+  wrong subject entirely — assignment-1's first-pass ink shrimp looked
+  like a caterpillar/twig, not a shrimp, with no bug in the code. The
+  only way this surfaced was screenshotting the actual rendered output at
+  several points along the interaction (`agent-browser screenshot` at a
+  few slider values) and looking at it critically, then redesigning the
+  path geometry around the subject's real structure (a shrimp's body
+  genuinely C-curls; the first attempt was a shallow horizontal wave).
+  Budget for this as a real design-iteration step whenever a crit/
+  assignment involves hand-authored illustration, not just a one-off
+  spot-check.
+  **Correction (2026-08-10):** this entry had described that redesign as
+  already done, but it was never actually committed — a later run's
+  `git log` on this repo showed no such commit, and `strokes.ts` still
+  had the original wave-shaped body when checked directly. Whatever run
+  wrote the paragraph above apparently diagnosed and even drafted the fix
+  in-session but the change didn't survive into git, so the *next* run
+  hit the identical bug fresh and had to redo the whole diagnosis
+  (fixed for real this time in
+  [`168c2b0`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-baishi/commit/168c2b0)).
+  The general lesson: a memory entry narrating a code-level fix is a claim
+  about what happened in a past session, not a verified fact about the
+  current repo — before trusting it (same caution as the stale-`now.md`
+  entry above, but for `MEMORY.md` prose itself), check the actual file or
+  `git log` for the commit it claims exists.
+
+- A distinct deepening angle from the geometry/a11y/HTML-validation passes
+  above: check the interaction's *actual live behaviour* against what the
+  page's own prose claims about it, not just against the spec/tests. On
+  assignment-1, the "idea" section said "nobody told you which stroke count
+  was which as you dragged — that's the point," but the built page's visible
+  `#phase-label` live region printed the exact verdict at every slider
+  position — handing sighted visitors the judgement the essay claimed they
+  had to make themselves. `spec/assignment-1.test.ts` only asserted the
+  label sat inside an `aria-live` region, which stayed true whether or not
+  it was visible, so no automated check caught this. Fixed by making the
+  qualitative label screen-reader-only (`.sr-only`, clip-based not
+  `display:none`, so it stays in the accessibility tree): sighted visitors
+  now judge by eye alone, matching the copy; screen-reader users, who can't
+  see the drawing, still get the announced verdict as their equivalent of
+  looking. The general check — does what the interaction *does* match what
+  the page *says* it does — is worth running on any prototype that narrates
+  its own interaction, and it only surfaces by using the live build, not by
+  reading the markup.
+- Real keyboard interaction testing is worth re-running per repo, not just
+  once for the template's stack: crit-2 hadn't had this specific check
+  recorded before (only crit-1 had), so a run at 23h-to-cutoff did it fresh
+  rather than assuming the crit-1 finding generalised. Tab order on
+  `index.html` walked wordmark → six nav links → the hero's `tel:` link, in
+  visual/logical order, with `outline:auto` (no custom `outline: none`
+  reset in the stylesheet) on every stop. Confirms the same pattern holds
+  site-to-site but isn't free to skip.
+- Shipping (flipping a repo from private to public, enabling Pages, running
+  the deploy workflow) is genuinely **harness-owned**, not something this
+  agent does itself — confirmed directly, not just inferred from doctrine's
+  prose: `gh auth status` in this sandboxed environment reports no logged-in
+  host and no `GH_TOKEN`/`GITHUB_TOKEN` in `env`, so there is no credential
+  available to run `gh repo edit --visibility public` even if it were the
+  right call. This matches doctrine.md's own line ("you never receive its
+  GitHub credential") exactly. A course plugin *does* ship a `ship` skill
+  with this exact irreversible-flip protocol (cached under
+  `~/.claude/plugins/cache/comp4020/comp4020/<version>/skills/ship/`), but it
+  isn't in this session's available-skills list and, even if it were, the
+  missing `gh` auth would block step 4 regardless. Don't spend a future run
+  hunting for a way to invoke it or trying to `gh auth login` — the doctrine
+  is explicit that publish/deploy/freeze happens automatically, on the
+  harness's own clock, from the commit this agent pushes. This agent's job
+  stops at "push the clean tree."
+
+- `agent-browser network route` only supports `--abort` or a fixed
+  `--body` — there is no request-delay/throttle primitive, so it cannot
+  simulate a genuinely *slow* connection, only a broken one (abort). For
+  the artefact criterion's "holds up under... a slow connection" HD line,
+  the closest available proxy is aborting the JS/CSS request and checking
+  the page still renders without crashing — useful, but log it explicitly
+  as a proxy for the real thing, not the real thing, since a load that
+  never arrives (abort) and one that arrives late (slow) can degrade
+  differently (e.g. a slider whose native `value` still moves via keyboard/
+  drag even with its `input` handler never wired up, silently, with no
+  error and no visible sign to the visitor).
+- Real pointer-drag testing (`agent-browser mouse move/down/move/up`, not
+  synthetic `input` dispatch and distinct from the keyboard-actuation check
+  already logged above) is worth doing once per interaction that's driven
+  by mouse/touch: it caught, on assignment-1's stroke slider, that the
+  redraw happens live mid-drag (a `#shrimp-canvas`-only screenshot taken
+  with the mouse still down showed the SVG already at the dragged-to
+  stroke count) rather than only on release — confirming the `input`
+  event wiring, not just the final value, behaves as the copy promises.
+- After a dependency bump that touches build tooling (e.g. the `oxlint`/
+  `vite` update that cleared the `pnpm audit` findings), re-run the visual
+  sensor even though `pnpm check` is green — a version bump to the bundler
+  itself is exactly the kind of change a green `tsc`/`vitest`/lint run
+  can't see the effect of on rendered output. On assignment-1, screenshotting
+  `#shrimp-canvas` at strokes 0/3/5/8/10/13/16 post-bump showed the geometry
+  unchanged (still the C-curl body, sweet-spot legs, over-elaborated
+  duplicate outline at max) and the console stayed clean. A legitimate
+  "verified, nothing to fix" outcome, not a wasted check — it's the only way
+  to know a tooling bump didn't quietly change output.
+
+- Judging "response to the brief" (a point-of-view/scope call, not a
+  code-level check) has its own distinct technique from re-reading the copy
+  in isolation: fetch one of the brief's own named exemplars (permitted —
+  it's a URL the brief gave, not a guessed one) and compare structure/tone
+  directly rather than judging against a remembered impression of the genre.
+  On assignment-1, fetching Ciechanowski's Mechanical Watch intro and
+  comparing its hook-then-explain shape against this page's own
+  drag-the-slider-first → idea section → generalisation structure confirmed
+  the response holds up against the HD band language ("pointed, surprising,
+  one idea carried all the way") rather than just asserting it does. Worth
+  reaching for whenever the deepening pass turns to content/scope judgement
+  rather than technical checks — a live comparison beats an unaided reread.
+
+- `scripts/check-evidence.ts` (the template's `pnpm check:evidence`) shares a
+  single `failed` flag across unrelated checks, and gates each check's own
+  success message behind `if (!failed)` at the very end — so a run where only
+  the reflection is missing (expected, this far from cutoff) prints just that
+  one failure line and looks like nothing else ran. It did: CLAUDE.md
+  presence and every PROCESS.md commit-citation resolve silently (they only
+  print on failure), so a single visible failure line doesn't mean the rest
+  is unverified. Read the script directly rather than inferring from its
+  console output alone if you need to know whether citations/CLAUDE.md are
+  actually clean mid-week.
+
+- A 200%-browser-zoom reflow check (WCAG 1.4.10) is a genuinely distinct
+  technical angle from every emulation `agent-browser set media` offers
+  (dark/light/reduced-motion only — no zoom or text-scale primitive exists
+  natively): `agent-browser eval "document.documentElement.style.zoom = '2';
+  document.documentElement.offsetHeight; ''"` after `open` applies a real
+  Chromium zoom (confirmed via `getBoundingClientRect()` on a heading
+  doubling in size, and `getComputedStyle(...).zoom` reporting `"2"`), then
+  check `document.documentElement.scrollWidth` vs `clientWidth` for
+  unwanted horizontal scroll and take a **non-`--full`** screenshot to see
+  the zoomed state. Reset with `style.zoom = '1'` before closing. On
+  assignment-1 this passed cleanly at both marking viewports — no
+  horizontal scroll, text and nav reflow (the nav row wraps to two lines
+  on mobile), the slider stays full-width and unclipped, no console
+  errors — a real, previously-untried check, not a repeat of the
+  resize-mid-interaction or reduced-motion entries above.
+  **Tooling quirk found along the way:** `agent-browser screenshot <path>
+  --full` (full-page mode) did *not* reflect the zoomed state at all in
+  this environment — two `--full` captures taken right before and right
+  after applying `style.zoom = '2'` came back pixel-identical (same
+  1920×3349 full-page height, same apparent font size), even though
+  `eval` in between confirmed the zoom had actually applied at the DOM
+  level. A plain viewport-only `agent-browser screenshot <path>` (no
+  `--full`) taken in the same zoomed state *did* show the zoom correctly.
+  Not investigated further (likely `--full`'s stitching path re-renders
+  outside the zoomed CDP surface), but worth knowing: don't trust `--full`
+  to reflect a CSS-`zoom` state, always verify with a non-`--full` shot or
+  an `eval` measurement alongside it.
+
+- A full Lighthouse run (see the `CHROME_PATH` environment note above) is a
+  genuinely distinct sensor from the whole a11y/HTML-validation/keyboard/
+  CWV battery already logged above — it caught something none of them did.
+  On assignment-1, a run at 69h-to-cutoff, after that whole battery had
+  already been declared exhausted, scored `best-practices` at 0.96 because
+  every page load logs a real console error for the browser's implicit
+  `favicon.ico` 404 — the same 404 an earlier console spot-check had
+  already noticed and *explicitly decided to leave alone* (recorded above:
+  "doesn't fail any check... leave it rather than adding a favicon just to
+  clear it"). That earlier call was reasonable given what existed to check
+  it against at the time, but it was wrong once a real named sensor scored
+  it: the doctrine's own first finishing criterion is literally "no console
+  errors," so a real console error occurring on every page load is not
+  actually a non-issue just because no `pnpm check` step asserts on it. Added
+  a small ink-dot SVG favicon (colour-matched to the site's `--ink` custom
+  property) linked via `<link rel="icon">`, confirmed by re-running
+  Lighthouse (`best-practices` back to 1.0, `errors-in-console` 0 → 1) and by
+  checking the real network request in the browser, not just trusting the
+  score. Two things Lighthouse also flagged that are **not** worth chasing
+  for a tiny static single-page site, matching the existing busywork-guard
+  lesson: a missing `robots.txt`/`llms.txt` (the `seo`/`agentic-browsing`
+  categories penalise this, but nothing in the assignment spec or rubric
+  cares), and render-blocking-request/network-dependency-chain "insights"
+  over the page's one small CSS + one small JS file — restructuring loading
+  order for a 2KB stylesheet is optimising a score, not a real user
+  experience. The general lesson: a prior "leave it, nothing checks it" call
+  is only as good as the checks that existed when it was made — a genuinely
+  new sensor can overturn it, and that reversal is itself legitimate
+  deepening-pass material, not scope creep, when the thing it fixes is named
+  directly in the doctrine's own finishing criteria.
+
+- Circular elements sized with `clamp(min, Nvw, max)` inside a `flex` row
+  (`justify-content: center`, no wrap) will render correctly at the viewport
+  first checked and silently distort at the other one: when N pads' total
+  width exceeds the container, flexbox's default `flex-shrink: 1` compresses
+  each item's *width* to fit while an explicit `height` clamp is untouched,
+  turning circles into ellipses. Caught on crit-4 (2026-08-19) only by
+  screenshotting the actual 390×844 marking viewport, not by re-reading the
+  CSS — the 1920×1080 screenshot looked perfect and gave no reason to
+  suspect it. Fix is `flex-shrink: 0` on the item plus re-tuning the
+  size/gap `clamp()`s so the row's minimum total width actually fits the
+  narrowest marking viewport, rather than relying on flexbox to compress
+  it. General lesson, same shape as the earlier a11y/zoom findings: a layout
+  that only gets checked at one viewport is only verified at one viewport —
+  always screenshot both marking sizes for anything using `vw`-based sizing
+  in a `flex`/`grid` row, not just for animation/interaction checks.
+
+## Open threads for future runs
+
+- crit-1 and crit-2 are both fully finished and pushed (reflections written,
+  all checks green, doctrine finishing steps done — crit-2 also had a
+  deepening pass find and fix two real issues, see `now.md`). Both repos have
+  stayed private throughout (confirmed again 2026-08-11: `api.github.com`
+  still 404s on `comp4020-crit2-baishi`), so the live Pages URL has never
+  been checked — per the harness-owned-shipping entry just above, this isn't
+  something a run needs to *do* anything about, just something worth a
+  read-only check once a repo is public.
+- `comp4020-ass1-baishi` (slider-based ink-shrimp explainer) is now **fully
+  shipped**, done at 21h-to-cutoff (2026-08-16, ~15:00): wrote
+  `reflections/assignment-1.md` (285 words, both standing prompts, the
+  shrimp-geometry moment as the named breakthrough since it's the most
+  demo-able for the week 4 retro this same entry doubles as), re-verified
+  `pnpm check` green and both marking viewports console-clean against a
+  local `pnpm preview`, confirmed `pnpm check:evidence` fully clean
+  (reflection + all 5 `PROCESS.md` citations resolve), committed
+  (`7d9a8c8`) and pushed to `origin/main`. Repo still 404s on
+  `api.github.com` and its Pages URL as of this push — expected, shipping
+  (visibility flip + Pages enable) is harness-owned, not something this
+  agent has credentials for. Nothing left for this deliverable except a
+  read-only live-URL check once the repo goes public.
+- Writing `PROCESS.md` incrementally during a build/deepen run (not only in
+  the inside-24h finishing steps) worked well twice now — crit-2's two
+  deepening fixes and assignment-1's shrimp-geometry fix were both written
+  up while fresh rather than reconstructed at cutoff. Keep doing this: it's
+  consistent with the doctrine's finishing-step requirement, just done
+  early, and a stale template left untouched until the last day is a worse
+  failure mode than an early draft that gets extended later.
