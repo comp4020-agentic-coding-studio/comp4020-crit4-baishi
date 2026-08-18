@@ -1,85 +1,55 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
+A reading-guide to how the work came together — a map to the process, not an
+essay about it.
 
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+**Drift**: eight glowing pads laid out across one pentatonic scale, so any
+combination a player touches sounds consonant. A pad sounds on mouse press,
+touch, or one of the home-row keys A S D F G H J K; dragging or sliding a
+finger across pads bends between notes (a glissando), and moving up or down
+continuously sweeps a shared lowpass filter and feedback delay, so the same
+eight notes feel brighter or darker depending on where you play. Nothing plays
+until the player acts, and there is no way to play it wrong.
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+1. **The pads were circles on a laptop screen and ellipses on a phone.**
+   Building the layout with `clamp()`s sized against `vw`, I checked it first
+   at 1920×1080 and it looked right — round pads, evenly spaced. Rather than
+   assume the same CSS held at the other marking viewport, I resized to
+   390×844 with `agent-browser` and screenshotted it, which is what actually
+   showed the pads squashed into ovals: flexbox was shrinking their *width* to
+   fit eight of them in the narrow row while their `height` clamp stayed
+   untouched. I fixed it by giving pads `flex-shrink: 0` and re-tuning the
+   size and gap `clamp()`s to genuinely fit a 390px-wide row rather than rely
+   on flexbox to compress them, then re-screenshotted at 390×844 to confirm
+   round pads before committing either version — so the commit history shows
+   the working layout, not a broken one
+   ([`7b23f91`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/7b23f91f5ed1dba437d431d57e0d6f5361d38a4d)).
+   This is the kind of thing a `pnpm check` typechecking/build/lint pass
+   can't see and a desktop-only glance would have shipped: only looking at
+   the rendered page at the other real viewport caught it.
 
-1. **what happened** --- the problem, or the thing that went wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+2. **Keyboard sustain needed a real interaction test, not a read of the
+   code.** `agent-browser press <key> --hold <ms>` turned out not to
+   actually hold the key down in this sandbox — a background `press --hold`
+   followed by a mid-hold `eval` always read the pad as inactive, which
+   looked like a bug in `main.ts`'s `keydown`/`keyup` handling. Rather than
+   patch code against a symptom I hadn't isolated, I dispatched a real
+   `KeyboardEvent('keydown', {key: 'd'})` directly via `eval` instead, held
+   it, then dispatched `keyup` — and the pad lit up correctly. That told me
+   the instrument's key handling was right and the test tool's `--hold` flag
+   was the thing not doing what its name suggested in this environment, so I
+   verified the actual feature (glissando drag, arrow-key brightness, chord
+   pads) with direct event dispatch for the rest of this session rather than
+   trusting `--hold`
+   ([`7b23f91`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/7b23f91f5ed1dba437d431d57e0d6f5361d38a4d)).
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** --- the standards and checks your work has to satisfy
---- rather than in a retry: a rule added to `CLAUDE.md`, a check wired up, an
-attempt thrown away. Retrying until it passes is the routine case, and changing
-what the work runs against is the skilled one.
+## Still open
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
-
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
-
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
-
-> the prompt, verbatim
-
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
-
-### A worked moment, for shape
-
-Delete this section along with the rest of the boilerplate --- it's here to show
-the four jobs in one paragraph, not to be imitated in content.
-
-> The date formatter kept coming back with `toLocaleDateString()` and no locale
-> argument, so the same build rendered differently on my machine and in CI. I'd
-> already re-prompted it twice, which fixed the line but not the habit, so the
-> third time I put the rule in `CLAUDE.md` instead
-> ([`3f9ac21`](https://github.com/YOUR-ORG/YOUR-REPO/commit/3f9ac21)) and added
-> a spec test that fails on a bare `toLocaleDateString`. That's what told me it
-> had actually taken: the test went red against the old code and green against
-> the new, and the next two features it wrote passed it without prompting
-> ([`3f9ac21...b7e0d14`](https://github.com/YOUR-ORG/YOUR-REPO/compare/3f9ac21...b7e0d14)).
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that a
-reflection entry the marker reads is in `reflections/`, and that your
-`CLAUDE.md` is there --- before a marker ever opens the file. It checks that
-your map is traceable, not that it is good: the marker judges whether your
-small, deliberately chosen set of moments shows real judgement and reflection. A
-green check is not a substitute for that curation.
-
-Images aren't checked: whether one renders is visible the moment you look. Open
-this file on GitHub and look at it before you ship.
+The link-preview card (`public/card.png`) is still the starter's generic
+placeholder — deliberately left for a later pass once the instrument's visual
+identity (the pink-on-dark glow) is settled, rather than designed against a
+build that might still change shape.
