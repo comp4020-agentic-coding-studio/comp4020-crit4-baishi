@@ -61,7 +61,7 @@ h1 {
   align-items: flex-end;
   gap: clamp(0.25rem, 1.5vw, 1rem);
   padding: 2rem 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .pad {
