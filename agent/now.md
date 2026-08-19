@@ -7,72 +7,74 @@ deliverable: comp4020-crit4-baishi
 
 ## State
 
-This run's prompt named `comp4020-crit4-baishi`, 167h to cutoff — the start of
-the week, so the job was plan + build, not finish. Fetched
-`crits/04-instrument.json`: "An instrument" (week 5) — turn the browser into a
-musical instrument a stranger can pick up and play, Web Audio API, client-side,
-expressive, no score/fail state, playable with mouse/keyboard/touch.
+This run's prompt named `comp4020-crit4-baishi`, 160h to cutoff — a deepening
+run, not the first build (Drift, the eight-pad pentatonic instrument, was
+already built and pushed by the previous run). Ran the fuller audit battery
+that run's own `now.md` had flagged as not-yet-done, and closed three of its
+four open threads.
 
-Repo was the bare starter (2 commits). Built **Drift**: eight glowing pads
-across one pentatonic scale (so no combination ever clashes), playable by
-pointer, touch, or the home-row keys A S D F G H J K. Dragging/sliding across
-pads glissandos between notes (each pointerId is its own voice, so multi-touch
-gives real chords); vertical position continuously sweeps a shared lowpass
-filter + feedback delay (ArrowUp/ArrowDown covers this for keyboard-only
-players with no pointer); Tab+Enter/Space also reaches every pad. AudioContext
-only starts on first gesture — no autoplay, silence is the resting state.
+**Audio liveness (closed).** This agent can't hear, so every prior check of
+note-on/off had only ever read `.active` classes. Verified for real by tapping
+the Web Audio graph from outside the app: patched `AudioContext.prototype.
+createOscillator`/`AudioNode.prototype.connect` and spliced an `AnalyserNode`
+in front of the destination via `eval`. First attempt showed nothing —
+dispatching a synthetic `KeyboardEvent` left the context permanently
+`"suspended"` (Chrome's autoplay gate doesn't count a page-dispatched event as
+real user activation, even though the pad still lit up). A real CDP-driven
+`agent-browser mouse down`/`press` resumed the context and the analyser read a
+genuine signal, confirmed further with a two-note chord (correctly-mixed peak,
+clean drop to zero on release). Wrote this technique up as a `MEMORY.md`
+lesson — it'll recur on every future audio crit.
 
-Caught and fixed a real bug before committing: pads were circles at
-1920×1080 but ellipses at 390×844 (flexbox shrinking width, not height, to
-fit 8 pads in a narrow row) — only visible by actually screenshotting the
-mobile viewport, not from reading the CSS. Fixed with `flex-shrink: 0` and
-re-tuned `clamp()`s. Also found `agent-browser press <key> --hold <ms>`
-doesn't actually sustain the key in this sandbox (mid-hold `eval` always saw
-the pad inactive) — worth recording in `MEMORY.md`. Verified real hold/chord
-behaviour instead via `document.dispatchEvent(new KeyboardEvent(...))`
-directly, which did work correctly and confirmed the instrument's own
-keydown/keyup handling was right all along.
+**Audit battery (closed, two real fixes).** axe-core + html-validate caught
+`aria-label` on a plain `<div>` (→ `role="group"`, `010fb7c`). Lighthouse
+caught a real console error on every load from the browser's implicit
+`favicon.ico` probe (→ added `public/favicon.svg` + a `<link rel="icon">`,
+`8e7375c`; best-practices back to 1.0). A manual WCAG contrast calc confirmed
+axe's remaining "incomplete" colour-contrast flag (the animated gradient
+background) is a genuine non-issue at 11.6–17.2:1 across the full range.
 
-Wrote `spec/crit-4.test.ts` (deleted the worked-example `starter.test.ts`)
-covering the mechanically-checkable spec lines: no `<audio>`/`<video>`
-playback, `createOscillator` present in the build (live synthesis not a
-sample), every pad a real focusable `<button>` naming its note and its own
-key, no score/fail/wrong vocabulary anywhere, distinct notes per pad, a
-non-empty hint before the player acts. `pnpm check` green (26 tests). Wrote
-`PROCESS.md` with the two moments above, both already committed and cited.
-Left `public/card.png` as the starter's placeholder deliberately — visual
-identity (dark background, pink glow) only just landed, revisit once it's
-settled rather than designing a card against a build that might still shift.
+**Card.png (closed).** Replaced the starter's placeholder with a real
+1200×630 card, built by reusing the site's own compiled stylesheet in a
+standalone composition rather than a separate mockup (`c050385`).
 
-Committed in three stages (build, spec test, PROCESS.md) and pushed to
-`origin/main` (`14aadaf`). `pnpm check:evidence` fails only on the missing
-`reflections/crit-4.md`, which is a finishing-step item, correctly not owed
-this early.
+**A real bug, self-introduced and self-corrected.** The 200%-zoom reflow
+check found a genuine 134px horizontal overflow at 390×844 zoomed — fixed
+with `flex-wrap: wrap` (`9ab56fd`). I glanced at a desktop screenshot
+afterward, judged it "unaffected, single row," and said so in that commit
+message and in `PROCESS.md`. Wrong: `.pad`'s size was still a `vw`-based
+clamp tied to the full viewport rather than to `.instrument`'s own rendered
+width (capped by `main`'s 640px `max-width`), so at 1920px wide it saturated
+at its rem max and 8 pads + gaps (688px) never fit the 640px row — it was
+*already* wrapping into 7+1 at plain desktop zoom, visible in that same
+screenshot, and I missed it on a glance. Caught on a later, more careful pass
+that measured `getBoundingClientRect()` and counted actual row positions
+instead of eyeballing. Fixed for real with CSS container queries
+(`container-type: inline-size` on `.instrument`, `cqw` instead of `vw` on
+`.pad`'s size/gap, `6392ba8`), then re-verified by measurement at all four
+combinations (both marking viewports × normal/200% zoom) before pushing.
+Corrected the inaccurate claim honestly in `PROCESS.md` (`b2de0d1`) rather
+than leaving it — this is the same "narrate the miss, not just the fix"
+practice `MEMORY.md` already asks for.
+
+All 8 of this run's commits pushed to `origin/main` (`b2de0d1`). `pnpm check`
+green, `pnpm check:evidence` fails only on the still-correctly-absent
+`reflections/crit-4.md` (a finishing-step item). Preview server processes
+shut down before finishing.
 
 ## Next action
 
-This is mid-week build, not finished. A future run (deepen phase) could:
+Still mid-week (deepening), not the last run. Only one open thread remains
+from the prior hand-off:
 
-- Design and commit a real `public/card.png` (1200×630) now that the
-  pink-glow-on-dark palette is settled, and update the description meta if
-  the instrument's name/pitch changes.
-- Run the fuller technical/a11y/interaction audit battery logged in
-  `MEMORY.md` (axe-core sweep, HTML validation, Lighthouse, 200%-zoom
-  reflow, tab-order/focus-visibility walk) — none of it has been run yet on
-  this repo, only the ad hoc checks done during this build.
-- Actually *listen* to it (this agent can't hear) — a future run should at
-  minimum verify via `eval` that oscillators are actually being created/
-  started/stopped correctly across rapid multi-note play, since correctness
-  there is inferred from DOM state (`.active` classes, voice map size) not
-  from audio itself. Consider whether an `AnalyserNode` + `eval`-readable
-  level meter would give a genuine liveness signal for a future run, since
-  this agent has no ears.
-- Consider whether 8 pads / 1 octave-and-change is the right amount of
-  range, or whether a second octave / an intentionally sparser 5-pad version
-  reads better for "a stranger can play it uninstructed" — this was a first
-  design pass, not something re-validated against the exemplar-comparison
-  technique logged in `MEMORY.md` (fetching the brief's own named examples).
-  The crit-4 brief itself names no specific exemplar to fetch, unlike
-  assignment-1's Ciechanowski link — nothing to compare against there.
+- Whether 8 pads / 1 octave-and-change is the right range, or whether a
+  sparser/wider layout reads better for "a stranger can play it
+  uninstructed," is still untested against real strangers — this agent has
+  only ever checked its own audits, not a naive player's reaction.
+- Everything else the prior run's `now.md` flagged (card.png, the full audit
+  battery, audio liveness) is now done. A future deepening run should look
+  for genuinely new angles rather than re-running what's already closed —
+  e.g. a fresh axe-core/html-validate/Lighthouse pass only makes sense again
+  if the markup or CSS changes meaningfully first.
 - Reflection (`reflections/crit-4.md`) and the rest of the finishing steps
   are for the run the prompt calls last, not before.

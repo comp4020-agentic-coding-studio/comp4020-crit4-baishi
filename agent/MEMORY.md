@@ -558,6 +558,48 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   always screenshot both marking sizes for anything using `vw`-based sizing
   in a `flex`/`grid` row, not just for animation/interaction checks.
 
+- A `clamp(min, Nvw, max)` used to size elements inside a flex row that
+  itself sits inside a width-capped ancestor (e.g. `main { max-width: 40rem
+  }`) will saturate at its rem-based max regardless of how much room the
+  actual row has, once the viewport is wide enough — because `vw` always
+  reads off the full viewport, not the element's real container. On
+  crit-4 (2026-08-19) this caused a genuinely confusing bug: fixing a
+  200%-zoom mobile overflow by switching `flex-wrap` from `nowrap` to
+  `wrap` was correct, but the row was *already* wrapping at plain desktop
+  zoom with no zoom applied at all, because 8 pads at their `vw`-clamp max
+  plus gaps (688px) never fit the 640px-capped row. This was missed on a
+  first pass because a screenshot glance at "looks like one row" isn't
+  verification — the fix is CSS container queries: `container-type:
+  inline-size` on the row's own element, then size children with `cqw`
+  instead of `vw` so they scale against the row's real rendered width, not
+  the viewport. Verify by measuring `getBoundingClientRect()` and counting
+  distinct row `top` positions across all four combinations (both marking
+  viewports × normal/200% zoom), not by eyeballing a single screenshot —
+  same shape as the earlier ellipse-pads and clamp()-in-flex-row lessons
+  above, but for row count instead of aspect ratio. This will recur on any
+  future crit with a `vw`-sized row inside a width-capped container.
+- To verify Web Audio is actually producing sound (this agent can't hear,
+  and DOM state like `.active` classes or a voice-count map only proves the
+  app's own bookkeeping ran, not that anything audible happened): patch
+  `AudioContext.prototype.createOscillator` and `AudioNode.prototype.connect`
+  via `agent-browser eval`, splice a real `AnalyserNode` in front of
+  `destination`, then read its time-domain/frequency data after a real
+  interaction. Two traps: (1) the naive patch that calls the *patched*
+  `connect` again for the analyser's own hookup to destination recurses —
+  guard with a flag and call the original `connect` (saved before
+  patching) directly for that one hookup; (2) a synthetic
+  `document.dispatchEvent(new KeyboardEvent(...))` correctly triggers the
+  app's own handlers (oscillator created, `.active` class set) but leaves
+  `AudioContext.state` stuck `"suspended"` — Chrome's autoplay gate does
+  not count a page-dispatched synthetic event as real user activation. Use
+  genuine CDP-driven input instead (`agent-browser press`, `agent-browser
+  mouse down`/`up`), which does resume the context to `"running"` and lets
+  the analyser read a real, non-zero signal. Confirmed on crit-4
+  (2026-08-19) including a two-note chord (two live oscillators, correctly
+  mixed higher peak, clean drop to zero on release). This is a one-off
+  verification technique to run per audio-producing crit, not a permanent
+  test-suite addition.
+
 ## Open threads for future runs
 
 - crit-1 and crit-2 are both fully finished and pushed (reflections written,
@@ -588,3 +630,11 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   consistent with the doctrine's finishing-step requirement, just done
   early, and a stale template left untouched until the last day is a worse
   failure mode than an early draft that gets extended later.
+- `comp4020-crit4-baishi` (Drift, the eight-pad pentatonic instrument) had a
+  full deepening pass on 2026-08-19, 160h-to-cutoff: closed the audio-liveness,
+  audit-battery, and card.png threads the prior run's `now.md` had opened (see
+  `now.md` for detail), and found + fixed a real self-introduced desktop
+  layout regression along the way (see the `vw`-vs-container-width entry
+  above). All 8 commits pushed to `origin/main` (`b2de0d1`). Only open thread
+  left: pad-count/range untested against a real naive player. Not the last
+  run — no reflection yet, correctly.
