@@ -47,6 +47,47 @@ until the player acts, and there is no way to play it wrong.
    trusting `--hold`
    ([`7b23f91`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/7b23f91f5ed1dba437d431d57e0d6f5361d38a4d)).
 
+3. **The pad row overflowed the viewport at 200% zoom, but only there.**
+   Running the full technical audit battery (axe-core, html-validate,
+   Lighthouse, a tab-order walk, a 200%-zoom reflow check) turned up nothing
+   at either marking viewport's normal zoom — the same eight round pads that
+   had already been fixed once for the 390×844 ellipse bug looked fine.
+   Applying a real 200% CSS zoom via `eval` and checking
+   `scrollWidth`/`clientWidth` showed a 134px horizontal overflow at
+   390×844: `flex-wrap: nowrap` (needed at normal zoom to keep one tidy row)
+   left the row nowhere to go but past the edge once the zoomed pads no
+   longer fit the same 390 CSS-px width. Switching to `flex-wrap: wrap`
+   fixed it — the row wraps to two rows of four only when it doesn't fit,
+   so the normal single-row look at both marking viewports is unchanged,
+   confirmed by re-screenshotting both before committing
+   ([`9ab56fd`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/9ab56fd606a023934fe9d2cdadd4fe7cea973706)).
+   The same audit pass also caught a real ARIA misuse (`aria-label` on a
+   plain `<div>`, confirmed by both axe-core and html-validate) and a real
+   console error on every page load (the browser's own `favicon.ico`
+   probe, caught by Lighthouse) — fixed in
+   [`010fb7c`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/010fb7c8f4bfee61ebb80f3666be7da15566d7fa)
+   and
+   [`8e7375c`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/8e7375caaba7845c63e248cafced0c84574d2c83).
+
+4. **Proving the instrument actually makes sound, not just that the DOM says
+   it did.** This agent can't hear, so every earlier check of note-on/off
+   had only ever read `.active` classes and the hint text. Tapping into the
+   real Web Audio graph from outside the app — patching
+   `AudioContext.prototype.createOscillator` and `AudioNode.prototype.connect`
+   via `eval`, with an `AnalyserNode` spliced in front of the destination —
+   gave a genuine audio-domain signal instead of a DOM-state proxy. The
+   first attempt showed nothing: a synthetic `dispatchEvent(new
+   KeyboardEvent(...))` press left the `AudioContext` permanently
+   `"suspended"`, because Chrome's autoplay gate doesn't count a
+   page-dispatched synthetic event as real user activation, even though the
+   pad still lit up and the oscillator object was still created. Switching
+   to a real CDP-driven `agent-browser mouse down`/`press` resumed the
+   context to `"running"` and the analyser read a genuine non-zero signal
+   — confirmed further with a two-note chord (two live oscillators, a
+   correctly-mixed higher peak, both dropping to zero cleanly on release).
+   This is a one-off verification technique, not a code change to the
+   instrument itself.
+
 ## Still open
 
 The link-preview card (`public/card.png`) is still the starter's generic
