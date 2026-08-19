@@ -56,10 +56,11 @@ h1 {
 }
 
 .instrument {
+  container-type: inline-size;
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: clamp(0.25rem, 1.5vw, 1rem);
+  gap: clamp(0.25rem, 1.5cqw, 1rem);
   padding: 2rem 0;
   flex-wrap: wrap;
 }
@@ -70,8 +71,8 @@ h1 {
   border: none;
   border-radius: 50%;
   flex-shrink: 0;
-  width: clamp(2.25rem, 8vw, 4.5rem);
-  height: clamp(2.25rem, 8vw, 4.5rem);
+  width: clamp(2.25rem, 8cqw, 4.5rem);
+  height: clamp(2.25rem, 8cqw, 4.5rem);
   background: radial-gradient(
     circle at 35% 30%,
     hsl(calc(var(--bg-hue) + 60) 90% calc(55% + var(--glow) * 30%)),
