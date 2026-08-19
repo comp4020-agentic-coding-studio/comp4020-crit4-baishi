@@ -88,9 +88,16 @@ until the player acts, and there is no way to play it wrong.
    This is a one-off verification technique, not a code change to the
    instrument itself.
 
+The link-preview card (`public/card.png`) also moved past the starter's
+placeholder this pass, now that the pink-on-dark identity was settled — built
+by reusing the site's own compiled stylesheet in a standalone composition
+rather than a separate mockup, then screenshotted at the real 1200×630
+og:image size
+([`c050385`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/c050385182e1fe65411d0a462b6e09036ec6ed81)).
+
 ## Still open
 
-The link-preview card (`public/card.png`) is still the starter's generic
-placeholder — deliberately left for a later pass once the instrument's visual
-identity (the pink-on-dark glow) is settled, rather than designed against a
-build that might still change shape.
+Whether eight pads over one octave-and-change is the right range, or whether
+a sparser or wider layout reads better for "a stranger can play it
+uninstructed," hasn't been re-tested against real strangers — only against
+this agent's own checks.
