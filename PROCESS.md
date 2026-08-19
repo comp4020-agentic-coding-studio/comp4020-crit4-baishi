@@ -47,20 +47,42 @@ until the player acts, and there is no way to play it wrong.
    trusting `--hold`
    ([`7b23f91`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/7b23f91f5ed1dba437d431d57e0d6f5361d38a4d)).
 
-3. **The pad row overflowed the viewport at 200% zoom, but only there.**
-   Running the full technical audit battery (axe-core, html-validate,
-   Lighthouse, a tab-order walk, a 200%-zoom reflow check) turned up nothing
-   at either marking viewport's normal zoom — the same eight round pads that
-   had already been fixed once for the 390×844 ellipse bug looked fine.
-   Applying a real 200% CSS zoom via `eval` and checking
-   `scrollWidth`/`clientWidth` showed a 134px horizontal overflow at
-   390×844: `flex-wrap: nowrap` (needed at normal zoom to keep one tidy row)
+3. **The pad row overflowed the viewport at 200% zoom — and my first fix for
+   it quietly broke desktop.** Running the full technical audit battery
+   (axe-core, html-validate, Lighthouse, a tab-order walk, a 200%-zoom
+   reflow check) turned up a 134px horizontal overflow at 390×844 under
+   200% CSS zoom, caught by checking `scrollWidth`/`clientWidth` via
+   `eval`: `flex-wrap: nowrap` (needed at normal zoom to keep one tidy row)
    left the row nowhere to go but past the edge once the zoomed pads no
    longer fit the same 390 CSS-px width. Switching to `flex-wrap: wrap`
-   fixed it — the row wraps to two rows of four only when it doesn't fit,
-   so the normal single-row look at both marking viewports is unchanged,
-   confirmed by re-screenshotting both before committing
-   ([`9ab56fd`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/9ab56fd606a023934fe9d2cdadd4fe7cea973706)).
+   fixed that overflow
+   ([`9ab56fd`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/9ab56fd606a023934fe9d2cdadd4fe7cea973706)),
+   but I claimed in that commit — from a screenshot I glanced at rather
+   than measured — that the normal single-row look at both marking
+   viewports was unchanged. It wasn't: `.pad`'s size was still a `vw`-based
+   clamp, tied to the full viewport rather than to `.instrument`'s own
+   rendered width (capped at `main`'s 40rem/640px), so at 1920px wide the
+   clamp saturated at its rem max and 8 pads plus gaps (688px) never fit
+   the 640px row — it was wrapping into 7+1 at plain desktop zoom, with no
+   zoom applied at all, in that same screenshot I'd already taken. A later,
+   more careful re-check (measuring `getBoundingClientRect()` and counting
+   distinct row positions, not eyeballing a screenshot) caught it before
+   push. Fixed for real with CSS container queries — `container-type:
+   inline-size` on `.instrument`, `cqw` instead of `vw` on `.pad`'s size and
+   the row's gap — so pad size tracks the instrument's actual box width
+   instead of the viewport
+   ([`6392ba8`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/6392ba83a7f0af6d21b74f41f476e00a60ccdeaa)),
+   re-verified this time by measurement at all four combinations (both
+   marking viewports, normal and 200% zoom): single row of 8 at both
+   viewports' normal zoom, no horizontal overflow at either viewport's
+   200% zoom, and the 2×4 wrap only appears where it's actually needed
+   (mobile at 200% zoom). The general lesson: a screenshot glanced at
+   rather than measured is not verification — the same mistake a prior
+   crit's `MEMORY.md` had already warned about for a different property
+   (circles turning to ellipses) recurred here for row count, and this
+   time it slipped past me into a commit message before a second look
+   caught it.
+
    The same audit pass also caught a real ARIA misuse (`aria-label` on a
    plain `<div>`, confirmed by both axe-core and html-validate) and a real
    console error on every page load (the browser's own `favicon.ico`
