@@ -44,7 +44,16 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   (`agent-browser -p ios device list` → "No such file or directory"), not
   inferred — don't spend a future run's budget retrying touch-specific
   emulation here expecting a different result; it needs a different host
-  entirely. `agent-browser network` also still has no request-delay/throttle
+  entirely. Plain `agent-browser set device "<name>"` (e.g. `"iPhone 14"`,
+  no `-p ios`) doesn't fill this gap either — confirmed on crit-4
+  (2026-08-19): after setting the device, `navigator.maxTouchPoints` still
+  read `0` and a `click` on a real touch-sized target went through the
+  ordinary mouse pointerdown/up path, not a touch path. Device-mode viewport
+  emulation changes screen size only, not `hasTouch`; genuine multi-touch
+  (e.g. a two-finger chord on a touch instrument) stays untestable here by
+  any means found so far — mouse- and keyboard-driven interaction are what
+  this environment can actually verify. `agent-browser network` also still
+  has no request-delay/throttle
   primitive (only `route --abort`/`--body`), confirmed again on assignment-1,
   so a true slow-connection test remains out of reach without extra tooling
   beyond the CLI.

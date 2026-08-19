@@ -7,74 +7,54 @@ deliverable: comp4020-crit4-baishi
 
 ## State
 
-This run's prompt named `comp4020-crit4-baishi`, 160h to cutoff — a deepening
-run, not the first build (Drift, the eight-pad pentatonic instrument, was
-already built and pushed by the previous run). Ran the fuller audit battery
-that run's own `now.md` had flagged as not-yet-done, and closed three of its
-four open threads.
+This run's prompt named `comp4020-crit4-baishi`, 154h to cutoff — still
+mid-week (deepening, not the last run). The repo was already clean and
+pushed at `b2de0d1`/`0f4d308` from the prior run, which had closed all four
+of its own open threads (audio liveness, audit battery, card.png, and the
+self-caught container-query fix). `pnpm check` was green on arrival.
 
-**Audio liveness (closed).** This agent can't hear, so every prior check of
-note-on/off had only ever read `.active` classes. Verified for real by tapping
-the Web Audio graph from outside the app: patched `AudioContext.prototype.
-createOscillator`/`AudioNode.prototype.connect` and spliced an `AnalyserNode`
-in front of the destination via `eval`. First attempt showed nothing —
-dispatching a synthetic `KeyboardEvent` left the context permanently
-`"suspended"` (Chrome's autoplay gate doesn't count a page-dispatched event as
-real user activation, even though the pad still lit up). A real CDP-driven
-`agent-browser mouse down`/`press` resumed the context and the analyser read a
-genuine signal, confirmed further with a two-note chord (correctly-mixed peak,
-clean drop to zero on release). Wrote this technique up as a `MEMORY.md`
-lesson — it'll recur on every future audio crit.
+Looked for genuinely new deepening angles rather than re-running what's
+already closed, per `MEMORY.md`'s own guidance. Two live checks, neither of
+which had been run for this specific repo before:
 
-**Audit battery (closed, two real fixes).** axe-core + html-validate caught
-`aria-label` on a plain `<div>` (→ `role="group"`, `010fb7c`). Lighthouse
-caught a real console error on every load from the browser's implicit
-`favicon.ico` probe (→ added `public/favicon.svg` + a `<link rel="icon">`,
-`8e7375c`; best-practices back to 1.0). A manual WCAG contrast calc confirmed
-axe's remaining "incomplete" colour-contrast flag (the animated gradient
-background) is a genuine non-issue at 11.6–17.2:1 across the full range.
+- **`prefers-reduced-motion` on the pad idle-glow, live-verified.** Read
+  alone, `styles.css` looks correct (`.pad { animation: none; transition:
+  none }` under the media query), but per the standing `MEMORY.md` lesson
+  this needs observing live, not just reading. Confirmed with
+  `agent-browser`: `getComputedStyle(pad).animationName` is `"idle"` under
+  no-preference, drops to `"none"` under emulated `reduced-motion`, and the
+  body's background `transitionDuration` drops to `"0s"` too. Restored to
+  `"idle"` when the preference was cleared. No bug — a genuine "verified,
+  correct" outcome.
+- **Touch-emulation ceiling confirmed again, not just inferred.** Tried
+  `agent-browser set device "iPhone 14"` (rather than the already-known-dead
+  `-p ios` provider) hoping device-mode viewport emulation would also carry
+  real touch points. It didn't: `navigator.maxTouchPoints` still read `0`
+  after setting the device, and a `click` on a pad drove it through the
+  ordinary mouse pointerdown/up path (correctly playing and releasing a
+  short note — not a bug, just not a touch-input test). This environment
+  still has no way to drive a genuine multi-touch chord; mouse- and
+  keyboard-driven chords are the only inputs this agent can actually verify,
+  which is the same ceiling the audio-liveness work in the prior run already
+  hit and worked around.
 
-**Card.png (closed).** Replaced the starter's placeholder with a real
-1200×630 card, built by reusing the site's own compiled stylesheet in a
-standalone composition rather than a separate mockup (`c050385`).
-
-**A real bug, self-introduced and self-corrected.** The 200%-zoom reflow
-check found a genuine 134px horizontal overflow at 390×844 zoomed — fixed
-with `flex-wrap: wrap` (`9ab56fd`). I glanced at a desktop screenshot
-afterward, judged it "unaffected, single row," and said so in that commit
-message and in `PROCESS.md`. Wrong: `.pad`'s size was still a `vw`-based
-clamp tied to the full viewport rather than to `.instrument`'s own rendered
-width (capped by `main`'s 640px `max-width`), so at 1920px wide it saturated
-at its rem max and 8 pads + gaps (688px) never fit the 640px row — it was
-*already* wrapping into 7+1 at plain desktop zoom, visible in that same
-screenshot, and I missed it on a glance. Caught on a later, more careful pass
-that measured `getBoundingClientRect()` and counted actual row positions
-instead of eyeballing. Fixed for real with CSS container queries
-(`container-type: inline-size` on `.instrument`, `cqw` instead of `vw` on
-`.pad`'s size/gap, `6392ba8`), then re-verified by measurement at all four
-combinations (both marking viewports × normal/200% zoom) before pushing.
-Corrected the inaccurate claim honestly in `PROCESS.md` (`b2de0d1`) rather
-than leaving it — this is the same "narrate the miss, not just the fix"
-practice `MEMORY.md` already asks for.
-
-All 8 of this run's commits pushed to `origin/main` (`b2de0d1`). `pnpm check`
-green, `pnpm check:evidence` fails only on the still-correctly-absent
-`reflections/crit-4.md` (a finishing-step item). Preview server processes
-shut down before finishing.
+No code changes this run — both checks came back clean, which is a
+legitimate outcome, not a failure to find work (see `MEMORY.md`'s
+busywork-guard entry). Working tree is unchanged from `origin/main`
+(`0f4d308`); nothing to commit or push.
 
 ## Next action
 
-Still mid-week (deepening), not the last run. Only one open thread remains
-from the prior hand-off:
+Not the last run — no reflection, no finishing steps yet. One thread still
+genuinely open, carried over unchanged from the prior hand-off:
 
-- Whether 8 pads / 1 octave-and-change is the right range, or whether a
-  sparser/wider layout reads better for "a stranger can play it
-  uninstructed," is still untested against real strangers — this agent has
-  only ever checked its own audits, not a naive player's reaction.
-- Everything else the prior run's `now.md` flagged (card.png, the full audit
-  battery, audio liveness) is now done. A future deepening run should look
-  for genuinely new angles rather than re-running what's already closed —
-  e.g. a fresh axe-core/html-validate/Lighthouse pass only makes sense again
-  if the markup or CSS changes meaningfully first.
-- Reflection (`reflections/crit-4.md`) and the rest of the finishing steps
-  are for the run the prompt calls last, not before.
+- Whether 8 pads / a bit over one octave is the right range for "a stranger
+  plays it uninstructed" is a design judgement this agent cannot resolve by
+  itself — it needs a real stranger's reaction (the studio crit itself, or a
+  future run with a different way to get that signal), not another
+  self-administered technical audit.
+
+A future deepening run should keep looking for angles this narrow set of
+audits hasn't tried (the reduced-motion and touch-emulation checks above are
+now closed) rather than repeating the same battery — e.g. a fresh CSS/prose
+re-read, or a fresh audit tool pass only if the markup/CSS changes first.
