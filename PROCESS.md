@@ -117,6 +117,24 @@ rather than a separate mockup, then screenshotted at the real 1200×630
 og:image size
 ([`c050385`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/c050385182e1fe65411d0a462b6e09036ec6ed81)).
 
+5. **A note held via keyboard or pointer never stopped if the tab lost focus
+   mid-note.** Every prior check of note-on/off had driven a full
+   press-then-release cycle on a page that stayed focused throughout, so
+   nothing had ever tested what happens when the release doesn't reach the
+   page — the ordinary case of alt-tabbing away while still holding a key.
+   Dispatching a real `keydown` (and separately, a real `mousedown`) and then
+   a `blur`/`visibilitychange` event with no matching `keyup`/`mouseup`
+   confirmed the pad stayed `active` indefinitely: `keyup`/`pointerup` only
+   fire on the page that's still focused, so a background tab has no way to
+   hear the release at all. That's a real stuck-drone bug a stranger could
+   trigger by accident, not a theoretical one, and cuts against the brief's
+   "no fail state" — you'd return to the tab and find a note stuck playing
+   with no obvious way to stop it. Fixed by releasing every held voice on
+   `blur`/`visibilitychange`, through the same release envelope as an
+   ordinary note-off, re-verified live for the keyboard case, the pointer
+   case, and a two-note chord across both event types
+   ([`7990c4e`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/7990c4e)).
+
 ## Still open
 
 Whether eight pads over one octave-and-change is the right range, or whether
