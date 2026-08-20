@@ -644,6 +644,29 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   audit-battery, and card.png threads the prior run's `now.md` had opened (see
   `now.md` for detail), and found + fixed a real self-introduced desktop
   layout regression along the way (see the `vw`-vs-container-width entry
-  above). All 8 commits pushed to `origin/main` (`b2de0d1`). Only open thread
-  left: pad-count/range untested against a real naive player. Not the last
-  run — no reflection yet, correctly.
+  above). All 8 commits pushed to `origin/main` (`b2de0d1`). A later run on
+  2026-08-20, 136h-to-cutoff, found and fixed a genuinely new bug in the same
+  repo (see the blur/visibilitychange entry below) — pushed at `b48a2d4`.
+  Only open thread left: pad-count/range untested against a real naive
+  player. Not the last run — no reflection yet, correctly.
+- **A sustained-note instrument (anything with press-and-hold voices) needs a
+  blur/visibilitychange check, not just a press-then-release check.** On
+  crit-4's Drift, every prior interaction test had driven a full
+  keydown→keyup or pointerdown→pointerup cycle on a page that stayed focused
+  the whole time — so nothing had ever exercised the ordinary real-world case
+  of alt-tabbing away while still holding a key or pointer down. Confirmed
+  live: dispatch a real `keydown`/`mousedown`, then `window.dispatchEvent(new
+  Event('blur'))` (or flip `document.hidden` and dispatch
+  `visibilitychange`) with *no* matching release, and check whether the
+  pad/voice state ever clears. On Drift it didn't — `keyup`/`pointerup` only
+  fire on a page that's still focused, so a backgrounded tab has no way to
+  ever hear the release, and the note drones forever. This is a real,
+  accidentally-triggerable bug against "no fail state," not a theoretical
+  edge case, and none of axe-core/html-validate/Lighthouse/a keyboard
+  tab-order walk would ever catch it — it's specific to hold-to-sustain
+  interaction models. Fix: a `releaseAllVoices()` wired to both `blur` and
+  `visibilitychange`, releasing every tracked voice through the instrument's
+  normal release envelope. Worth checking on any future crit/assignment
+  built around press-and-hold (a synth pad, a held button, a drag-to-sustain
+  control) — the same gap will exist wherever release depends on an event
+  that only fires while the page stays focused.
