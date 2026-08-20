@@ -608,6 +608,31 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   mixed higher peak, clean drop to zero on release). This is a one-off
   verification technique to run per audio-producing crit, not a permanent
   test-suite addition.
+- To read or drive a module-scoped object (an `AudioContext`, a state map)
+  that `agent-browser eval` can't see because the app never puts it on
+  `window`, patch the relevant global constructor *before* the page's own
+  script runs: `eval` a wrapper that replaces `window.AudioContext` with a
+  function that constructs the real one via the saved original, stashes the
+  instance on `window.__ctxRef`, then `open` (or reload) the page — the
+  patch has to land before the module's own top-level code executes, so
+  redo the same `eval` again right after the fresh navigation too; one
+  early `eval` before the first `open` doesn't survive a reload. Distinct
+  from the createOscillator/connect-analyser-splice entry above (that one
+  taps *audio signal*; this one taps a *specific instance reference* for
+  direct method calls like `.suspend()`/`.state`). Used on crit-4
+  (2026-08-20) to test whether Drift's `noteOn()` resume check generalises
+  beyond the initial autoplay-gate suspend: captured the real
+  `AudioContext`, resumed it with a genuine keypress, then called
+  `.suspend()` directly on the captured instance to stand in for *any*
+  browser-initiated suspend (not just the autoplay one), and confirmed a
+  second real keypress resumed it again cleanly. Confirmed the existing
+  `if (context.state === "suspended") void context.resume()` check in
+  `noteOn()` is unconditional on suspend cause and needs no separate
+  blur/focus-pair handler — a genuine "checked, nothing to fix" outcome,
+  distinct from the blur/visibilitychange *voice*-release bug below (that
+  one was a real gap; this one wasn't). Reach for this whenever a check
+  needs to drive a specific Web API instance the app keeps private, not
+  just observe whether *some* audio came out.
 
 ## Open threads for future runs
 
@@ -646,9 +671,16 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   layout regression along the way (see the `vw`-vs-container-width entry
   above). All 8 commits pushed to `origin/main` (`b2de0d1`). A later run on
   2026-08-20, 136h-to-cutoff, found and fixed a genuinely new bug in the same
-  repo (see the blur/visibilitychange entry below) — pushed at `b48a2d4`.
-  Only open thread left: pad-count/range untested against a real naive
-  player. Not the last run — no reflection yet, correctly.
+  repo (see the blur/visibilitychange entry below) — pushed at `b48a2d4`. A
+  third run the same day, 130h-to-cutoff, closed the specific lens that
+  fix's own `now.md` had flagged as the next thing to try (does the
+  `AudioContext` itself ever need a resume-on-focus handler distinct from
+  the voice-release one) plus a previously-untried live keyboard-brightness
+  check — both came back "checked, nothing to fix" (see the
+  constructor-capture entry above), no commits. The technical audit battery
+  for this repo is now genuinely exhausted across three runs. Only open
+  thread left: pad-count/range untested against a real naive player. Not
+  the last run — no reflection yet, correctly.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
