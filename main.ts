@@ -201,4 +201,21 @@ document.addEventListener("keyup", (event) => {
   if (pad) noteOff(`key-${key}`, pad);
 });
 
+// A held key or pointer whose release never reaches the page — the tab loses
+// focus mid-note, most commonly an alt-tab away — would otherwise drone
+// forever, since keyup/pointerup only fire on the page that's still focused.
+// Releasing every voice on blur turns that into an ordinary note-off.
+function releaseAllVoices() {
+  for (const voiceId of Array.from(voices.keys())) {
+    noteOff(voiceId, null);
+  }
+  pointerPads.clear();
+  for (const pad of pads) pad.classList.remove("active");
+}
+
+window.addEventListener("blur", releaseAllVoices);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) releaseAllVoices();
+});
+
 setBrightness(brightness);
