@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-20
+updated: 2026-08-21
 deliverable: comp4020-crit4-baishi
 ---
 
@@ -7,59 +7,68 @@ deliverable: comp4020-crit4-baishi
 
 ## State
 
-This run's prompt named `comp4020-crit4-baishi`, 130h to cutoff — still
-mid-week (deepening, not the last run). Arrived clean at `ee2a300`, `pnpm
+This run's prompt named `comp4020-crit4-baishi`, 119h to cutoff — still
+mid-week (deepening, not the last run). Arrived clean at `98a80d9`, `pnpm
 check` green, working tree clean, up to date with `origin/main`.
 
-Closed the specific lens the prior run's `now.md` flagged as the next thing
-to try: "does `AudioContext` ever get auto-suspended by the browser on a
-long-backgrounded tab in a way that would need a resume-on-focus handler to
-match?" Tested live rather than reasoned from the source: patched the
-`AudioContext` constructor via `agent-browser eval` before page load to
-capture the instance on `window` (module-scoped `audioContext` in `main.ts`
-isn't otherwise reachable from `eval`), triggered a real keypress to resume
-it (confirmed `"running"`), then called `.suspend()` directly on the
-captured instance — standing in for *any* browser-initiated suspend, not
-just the initial autoplay-gate one — and sent a second real keypress on a
-different pad. It resumed to `"running"` again with a clean console. The
-existing `noteOn()` check (`if (context.state === "suspended") void
-context.resume()`) is unconditional on *why* the context is suspended, so it
-already covers this case for free — no separate blur/focus-pair handler
-needed, unlike the stuck-voice bug the prior run fixed (which was a real gap
-because nothing released the *voices*, not the *context*). No code change;
-recorded as a genuine "checked, nothing to fix" outcome. Written up as a
-durable technique in `MEMORY.md` since the constructor-capture trick is
-reusable whenever a future crit needs live access to a module-scoped
-`AudioContext`/similar object that memory's existing analyser-patching entry
-doesn't cover.
+Tried two angles genuinely new to this repo (distinct from the "audit
+battery exhausted" list the prior run's `now.md` closed out with), both
+using real CDP-driven mouse events rather than synthetic `dispatchEvent`:
 
-Also ran a second, previously-untried live check while in there: real
-`ArrowUp`/`ArrowDown` keypresses against `getComputedStyle(document
-.documentElement).getPropertyValue('--brightness')`. Prior runs had only
-verified brightness via mouse-Y `pointermove` (the reduced-motion and
-zoom-reflow entries); the keyboard path through `setBrightness` had never
-been exercised live. Confirmed: starts at `0.500`, one `ArrowUp` moves it to
-`0.580` (the documented `BRIGHTNESS_STEP`), and enough presses clamp cleanly
-at `1.000` / `0.000` in either direction with no console errors. Nothing to
-fix.
+1. **Real mouse-drag glissando**, not synthetic events. Every prior
+   glissando check (see `PROCESS.md` moment 2) had verified the *keyboard*
+   hold path via direct `dispatchEvent`, because `agent-browser press
+   --hold` doesn't reliably sustain — but nothing had driven the actual
+   pointer-drag-across-pads path with genuine `agent-browser mouse
+   move/down/move/up`. Did that: mouse-down on the first pad (C4), drag to
+   the last pad (E5) while still held. DOM state was correct throughout —
+   the first pad's `.active` class cleared and the last pad's set, with
+   only ever one pad active at a time (no note-stacking bug across the
+   drag).
+2. **Audio-domain pitch correctness**, not just DOM bookkeeping. Reused the
+   analyser-splice technique from `MEMORY.md` (patch `AudioNode.prototype
+   .connect` to route the final `compressor → destination` link through an
+   `AnalyserNode`) to read the actual output spectrum during the drag
+   above. This closes a real gap: the prior audio-liveness check (crit-4,
+   2026-08-19) only proved *some* sound came out and that a chord mixed two
+   oscillators — it never confirmed the *pitch* played back matched the
+   *pad* pressed. Confirmed here: analyser peak bin tracked C4's ~261.63 Hz
+   while pad one was held, and shifted to E5's ~659.26 Hz once settled
+   after the drag to pad eight.
 
-No commits this run — both checks confirmed existing behaviour rather than
-finding a defect, so nothing to cite in `PROCESS.md` per the doctrine (it
-maps process to real commits).
+One genuine, non-bug finding along the way: reading the analyser too soon
+after the drag (300ms) still showed the *outgoing* note's pitch dominant,
+even though the DOM had already switched and the raw 350ms release ramp was
+most of the way decayed — the shared delay/feedback network's echo tail
+keeps the old pitch audible for longer than the dry envelope alone would
+suggest. This matches the instrument's own intended character (a bend, not
+a hard cut — see `main.ts`'s opening comment on the shared filter/delay) and
+isn't a defect; confirmed by re-reading after a longer settle (600ms), which
+showed the correct new pitch cleanly. No code change — recorded as a
+"checked, confirmed correct" outcome, same shape as the audio-context-resume
+and keyboard-brightness checks the prior run logged. Console stayed clean
+throughout (`agent-browser console` empty), and all pads/voices cleared
+correctly on mouse-up. No commits this run — nothing was broken to fix.
+
+Wrote the two new techniques (real-CDP-mouse-drag vs. synthetic-dispatch,
+and analyser-based pitch verification vs. liveness-only) up as durable
+`MEMORY.md` entries since both are reusable on any future instrument-shaped
+crit, not just Drift.
 
 ## Next action
 
-Not the last run — no reflection, no finishing steps yet. The technical
-audit battery is now genuinely exhausted across two runs (axe-core,
-html-validate, Lighthouse, zoom/container-query, reduced-motion, tab-order,
-audio-liveness via analyser, touch ceiling [untestable in this sandbox],
-blur/visibilitychange stuck-voice, and now audio-context-resume-after-
-suspend and keyboard-brightness). A future run should resist re-running this
-list and instead:
+The technical audit battery for this repo is now exhausted across four
+runs, including this one's genuinely new angle (real mouse-drag glissando +
+audio-domain pitch correctness). The one substantive open thread is
+unchanged from the last two runs and still needs a real signal this agent
+can't generate alone:
 
-- The one substantive open thread, carried forward across three runs now:
-  whether 8 pads / a bit over one octave is the right range for "a stranger
-  plays it uninstructed" needs a real stranger's reaction (the studio crit,
-  or some other real signal) — not another self-administered technical
-  audit. If a future run has genuinely run out of new technical angles to
-  try, it's fine to say so plainly rather than manufacture another probe.
+- Whether 8 pads / a bit over one octave is the right range for "a
+  stranger plays it uninstructed" needs a real stranger's reaction (the
+  studio crit itself, or some other real signal) — not another
+  self-administered technical audit.
+
+If a future mid-week run finds itself reaching for another synthetic probe
+against this same code, that's a sign to say so plainly rather than
+manufacture one — per the standing "no manufactured busywork" lesson in
+`MEMORY.md`. Not the last run — no reflection, no finishing steps yet.

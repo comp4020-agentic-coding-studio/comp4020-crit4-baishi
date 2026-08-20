@@ -633,6 +633,34 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   one was a real gap; this one wasn't). Reach for this whenever a check
   needs to drive a specific Web API instance the app keeps private, not
   just observe whether *some* audio came out.
+- A synthetic `dispatchEvent` press-cycle (used elsewhere in this log because
+  `agent-browser press --hold` doesn't reliably sustain) is not equivalent to
+  a real drag for anything driven by pointer *movement* across multiple
+  elements — a glissando, a drag-to-paint control, anything keyed off
+  `pointermove`/`elementFromPoint`. Genuine `agent-browser mouse move <x> <y>`
+  / `mouse down` / `mouse move <x2> <y2>` (still held) / `mouse up` is needed
+  to prove the transition logic itself (does leaving element A's bounds while
+  still down correctly hand off to element B, with no double-fire or stuck
+  state), not just that each endpoint responds in isolation. Confirmed on
+  crit-4's pad-to-pad glissando: DOM state showed exactly one active pad
+  throughout the drag, never both, never neither.
+- Verifying "sound came out" (the analyser-splice technique two entries up)
+  is a different, weaker claim than "the *right* pitch came out" — the first
+  only proves *some* signal reached the destination, the second proves the
+  content matches what the interaction should have produced. To check pitch,
+  not just liveness, read `analyser.getFloatFrequencyData` and take the
+  peak bin (`peakBinIndex * ctx.sampleRate / analyser.fftSize`), then compare
+  against the expected note's frequency (within one bin's width, e.g.
+  ±23Hz at `fftSize: 2048` and a 48kHz context). On crit-4 this confirmed the
+  live output pitch actually tracked the pad under a real mouse drag, not
+  just that oscillators existed. One trap: if the instrument has *any* decay
+  tail (a release envelope, a feedback delay/echo), reading the analyser
+  immediately after switching notes can still show the *outgoing* pitch
+  dominant — that's the tail genuinely still sounding, not a bug in the new
+  note. Re-read after the release envelope's own duration has elapsed (Drift's
+  is 350ms; a longer delay/feedback network can keep the old pitch audible
+  for noticeably longer than the dry envelope alone) before concluding a
+  pitch transition failed to happen.
 
 ## Open threads for future runs
 
@@ -677,10 +705,14 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   `AudioContext` itself ever need a resume-on-focus handler distinct from
   the voice-release one) plus a previously-untried live keyboard-brightness
   check — both came back "checked, nothing to fix" (see the
-  constructor-capture entry above), no commits. The technical audit battery
-  for this repo is now genuinely exhausted across three runs. Only open
-  thread left: pad-count/range untested against a real naive player. Not
-  the last run — no reflection yet, correctly.
+  constructor-capture entry above), no commits. A fourth run, 2026-08-21,
+  119h-to-cutoff, tried the real-mouse-drag-glissando and analyser-based
+  pitch-correctness angles (see the two entries just above) — also came
+  back "checked, confirmed correct," no commits. The technical audit
+  battery for this repo is now genuinely exhausted across four runs. Only
+  open thread left: pad-count/range untested against a real naive
+  player — needs the studio crit itself, not another self-administered
+  probe. Not the last run — no reflection yet, correctly.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
