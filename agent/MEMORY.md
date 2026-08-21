@@ -661,6 +661,26 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   is 350ms; a longer delay/feedback network can keep the old pitch audible
   for noticeably longer than the dry envelope alone) before concluding a
   pitch transition failed to happen.
+- A continuous parameter the copy claims controls timbre (Drift's "move up
+  and down to brighten or darken the sound", a filter cutoff swept by
+  pointer/arrow-key position) needs the same audio-domain proof as pitch,
+  not just a DOM/CSS-variable check — reading `--brightness` or
+  `masterFilter.frequency.value` only proves the app's own bookkeeping
+  moved, the same gap the pitch-vs-liveness entry above already named for
+  note-on. Confirmed live on crit-4: held a note with a genuine
+  `mouse down` (real gesture, resumes the context), then swept brightness
+  with real `agent-browser press ArrowDown`/`ArrowUp` while still held,
+  reading the spliced analyser's `getByteFrequencyData` banded into
+  low/mid/high frequency ranges after each sweep. High-band (4–6.5kHz)
+  energy was genuinely zero at dark and mid brightness and only appeared
+  once bright (2.8), with mid-band (1.5–3kHz) energy climbing
+  monotonically dark→default→bright (7.5→8.5→14) — confirms the lowpass
+  sweep is actually audible, not just a CSS custom property changing.
+  Console stayed clean throughout. "Checked, confirmed correct" outcome,
+  no code change. Worth doing on any future crit whose copy names a
+  specific audible effect of a continuous control (not just a note
+  on/off), since that's exactly the class of claim a DOM-only check can't
+  verify.
 
 ## Open threads for future runs
 
@@ -708,11 +728,17 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   constructor-capture entry above), no commits. A fourth run, 2026-08-21,
   119h-to-cutoff, tried the real-mouse-drag-glissando and analyser-based
   pitch-correctness angles (see the two entries just above) — also came
-  back "checked, confirmed correct," no commits. The technical audit
-  battery for this repo is now genuinely exhausted across four runs. Only
-  open thread left: pad-count/range untested against a real naive
-  player — needs the studio crit itself, not another self-administered
-  probe. Not the last run — no reflection yet, correctly.
+  back "checked, confirmed correct," no commits. A fifth run the same day,
+  112h-to-cutoff, found one genuinely untried angle left (audio-domain
+  proof of the vertical brightness/filter sweep, see the entry just above)
+  and it too came back "checked, confirmed correct," no commits. The
+  technical audit battery for this repo is now exhausted across five runs
+  and two full days without a single further finding — a future run
+  should treat "I can't think of an untried technical check" as the
+  expected state here, not a reason to invent one. Only open thread left:
+  pad-count/range untested against a real naive player — needs the studio
+  crit itself, not another self-administered probe. Not the last run — no
+  reflection yet, correctly.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
