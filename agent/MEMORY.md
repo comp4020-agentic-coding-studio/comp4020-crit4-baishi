@@ -731,14 +731,16 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   back "checked, confirmed correct," no commits. A fifth run the same day,
   112h-to-cutoff, found one genuinely untried angle left (audio-domain
   proof of the vertical brightness/filter sweep, see the entry just above)
-  and it too came back "checked, confirmed correct," no commits. The
-  technical audit battery for this repo is now exhausted across five runs
-  and two full days without a single further finding — a future run
-  should treat "I can't think of an untried technical check" as the
-  expected state here, not a reason to invent one. Only open thread left:
-  pad-count/range untested against a real naive player — needs the studio
-  crit itself, not another self-administered probe. Not the last run — no
-  reflection yet, correctly.
+  and it too came back "checked, confirmed correct," no commits. A sixth run
+  the same day, 106h-to-cutoff, found one more genuinely untried angle (full
+  8-voice chord headroom/clipping, see the entry just above) — also
+  "checked, confirmed correct," no commits. The technical audit battery for
+  this repo is now exhausted across six runs and two full days without a
+  single further finding — a future run should treat "I can't think of an
+  untried technical check" as the expected state here, not a reason to
+  invent one. Only open thread left: pad-count/range untested against a
+  real naive player — needs the studio crit itself, not another
+  self-administered probe. Not the last run — no reflection yet, correctly.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
@@ -760,3 +762,30 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   built around press-and-hold (a synth pad, a held button, a drag-to-sustain
   control) — the same gap will exist wherever release depends on an event
   that only fires while the page stays focused.
+- **Multi-voice headroom is a distinct claim from single/two-voice liveness
+  and needs its own audio-domain check.** Every earlier analyser-splice check
+  on Drift (liveness, chord mixing, glissando pitch tracking, filter-sweep
+  audibility) used at most a two-note chord — none had ever driven the
+  instrument to its actual maximum simultaneous-voice count. On a sixth run
+  (2026-08-21, 106h-to-cutoff), held a real `mouse down` on pad 1 (genuine
+  gesture, resumes the context) then layered in the other seven pads via
+  synthetic `keydown` (safe once the context is already running — the
+  autoplay-gate caveat only applies to the *resuming* gesture, not
+  subsequent voices added after resume) to build the full 8-note chord Drift
+  can ever produce, and read `getFloatTimeDomainData` off the spliced
+  analyser: peak 0.85 with zero samples at the ≥0.999 clipping threshold —
+  the `DynamicsCompressor` in the signal chain (`main.ts`'s `ensureAudio`)
+  keeps real headroom even at maximum simultaneous load, confirmed by
+  measurement rather than assumed from the node existing. Also confirmed the
+  release side of the same scenario: releasing all 8 (real `mouse up` +
+  synthetic `keyup` ×7) dropped every pad's `.active` class immediately, and
+  the analyser read a genuinely decaying signal — 0.13 peak ~0.6s after
+  release (the 0.28s-delay/0.32-feedback echo tail still audible, expected)
+  falling to ~3.5e-17 (silence) by ~2s — no stuck voice, no leaked
+  oscillator continuing to render after every key was up. Console stayed
+  clean throughout. "Checked, confirmed correct," no code change. The
+  general lesson: for any instrument whose voices share a bus with limited
+  headroom (a compressor, a fixed-gain mixer), the audio-liveness technique
+  above only proves *a* signal exists — proving the design's actual ceiling
+  case (every voice at once) doesn't clip needs the same technique deliberately
+  pushed to that ceiling, not just to two voices for convenience.
