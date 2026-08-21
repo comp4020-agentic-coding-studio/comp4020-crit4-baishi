@@ -135,6 +135,28 @@ og:image size
    case, and a two-note chord across both event types
    ([`7990c4e`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/7990c4e)).
 
+6. **Tab+Enter/Space reached the pads but only ever gave a fixed 180ms blip,
+   never a real hold.** Every prior interaction check had exercised pointer
+   drag, home-row keys, and Tab-reachability/focus-outline separately, but
+   none had asked whether *holding* Enter/Space on a Tab-focused pad
+   sustains a note the way holding a home-row key or a pointer does. Reading
+   the code showed it didn't: activation went through a synthetic `click`
+   event with a hardcoded `setTimeout(..., 180)`, deaf to how long the key
+   was actually down. Confirmed live — a real, trusted `agent-browser press
+   space` produced zero `click` events once the fix was in (so no
+   double-trigger), and a synthetic `keydown`/`keyup` pair held 400ms apart
+   showed the pad staying `active` for the full gap, unlike the old fixed
+   blip. That's a real gap against the brief's "playable with whatever is at
+   hand" and "the player's choices shape what they hear": a keyboard-only
+   player who discovers the pads by tabbing, rather than reading the
+   ASDFGHJK hint, was quietly denied the same expressiveness every other
+   input path already had. Fixed with real `keydown`/`keyup` listeners on
+   the pad that sustain for the actual hold, `preventDefault`ing the
+   button's own click-on-activate so it can't double-fire; the old
+   click-based blip stays only as a fallback for assistive tech that
+   activates via a bare `.click()` with no key events at all
+   ([`bbd50d6`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/bbd50d6)).
+
 ## Still open
 
 Whether eight pads over one octave-and-change is the right range, or whether
