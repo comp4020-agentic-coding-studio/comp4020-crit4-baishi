@@ -152,9 +152,30 @@ function releasePointer(event: PointerEvent) {
 document.addEventListener("pointerup", releasePointer);
 document.addEventListener("pointercancel", releasePointer);
 
-// A pad focused by keyboard and activated with Enter/Space fires a plain
-// synthetic click (detail === 0 for keyboard, >=1 for a real pointer click)
-// so Tab-only players can still sound a note without learning the letter keys.
+// A pad reached by Tab (not the letter keys) needs the same press-and-hold
+// expressiveness as every other input path, not a fixed blip: holding
+// Enter/Space sustains the note for as long as it's held, exactly like a
+// held pointer or a held home-row key. preventDefault on keydown stops the
+// button's own default activation from also firing a click for the same
+// press, which would otherwise double-trigger noteOn.
+instrument?.addEventListener("keydown", (event) => {
+  const pad = (event.target as HTMLElement).closest<HTMLElement>(".pad");
+  if (!pad || (event.key !== " " && event.key !== "Enter")) return;
+  event.preventDefault();
+  if (event.repeat) return;
+  noteOn(`focus-${pad.dataset.key}`, frequencyOf(pad), pad);
+});
+
+instrument?.addEventListener("keyup", (event) => {
+  const pad = (event.target as HTMLElement).closest<HTMLElement>(".pad");
+  if (!pad || (event.key !== " " && event.key !== "Enter")) return;
+  noteOff(`focus-${pad.dataset.key}`, pad);
+});
+
+// Assistive tech that activates a control by calling .click() directly, with
+// no keydown/keyup pair at all, never reaches the listeners above — this
+// fallback (detail === 0 marks a non-pointer click) gives that path a short
+// blip rather than silence.
 instrument?.addEventListener("click", (event) => {
   if (event.detail !== 0) return; // real pointer clicks already handled above
   const pad = (event.target as HTMLElement).closest<HTMLElement>(".pad");
