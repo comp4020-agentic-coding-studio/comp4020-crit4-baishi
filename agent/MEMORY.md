@@ -681,6 +681,25 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   specific audible effect of a continuous control (not just a note
   on/off), since that's exactly the class of claim a DOM-only check can't
   verify.
+- **"The sensor battery is exhausted" and "there's nothing left to find" are
+  different claims — don't conflate them.** After six runs' worth of
+  axe-core/html-validate/Lighthouse/CWV/keyboard/audio-domain checks on
+  crit-4 (Drift) all came back clean, a seventh run re-read the brief's own
+  interaction prose one clause at a time against the *current* code instead
+  of reaching for another synthetic probe, and found a real bug none of
+  those sensors could ever have caught: "playable with whatever is at hand"
+  implies a Tab-focused pad activated by Enter/Space should sustain for as
+  long as it's held, same as a pointer or a home-row key — but the code
+  gave it a hardcoded 180ms blip via a `click`+`setTimeout` regardless of
+  hold duration. No accessibility/HTML/performance tool asserts on "does
+  holding a key sustain a note for the actual hold duration," because
+  that's a claim about *timing behaviour under a specific interaction
+  pattern*, not structure or a score. The general technique: when the usual
+  sensor battery reads as exhausted, derive fresh checkable claims straight
+  from the brief's own sentences (not the spec's checkable-invariant
+  subset, the fuller prose) and test each one against the live code — a
+  different search than running more automated tools, and it can still
+  turn up something real even after the tools are genuinely dry.
 
 ## Open threads for future runs
 
@@ -741,6 +760,14 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   invent one. Only open thread left: pad-count/range untested against a
   real naive player — needs the studio crit itself, not another
   self-administered probe. Not the last run — no reflection yet, correctly.
+  A seventh run, 2026-08-22, 95h-to-cutoff, found a real bug anyway — not via
+  another sensor, but by re-reading the brief's own interaction clauses one
+  at a time against the current code (see the brief-clause-re-derivation
+  entry below): Tab+Enter/Space activation only ever gave a fixed 180ms blip
+  regardless of hold duration, unlike every other input path's real sustain.
+  Fixed and pushed (`bbd50d6`/`bd3ff2a`). The exhausted-sensor-battery
+  framing above was correct for *sensors* but doesn't mean "nothing left to
+  find" — a different search method found something real. Not the last run.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
