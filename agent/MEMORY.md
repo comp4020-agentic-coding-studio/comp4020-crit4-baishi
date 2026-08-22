@@ -714,6 +714,28 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   because the fix itself is new code the brief's prose hasn't been checked
   against yet — this isn't a fixed list to exhaust once, it's a technique to
   reapply after every change to hold/sustain logic specifically.
+- Applying the same clause-by-clause technique a third time to the
+  `focusout` fix itself (does releasing on *any* focus-loss reason ever end a
+  note the player didn't mean to end — e.g. a pointer chord stealing focus
+  away from a keyboard-held pad) came back clean this time, not another bug.
+  Confirmed live on crit-4: focused pad A via `.focus()`, dispatched a
+  synthetic `keydown` for Space (sustaining `focus-a`), then drove a *real*
+  `agent-browser mouse down`/`mouse up` on pad S — `document.activeElement`
+  stayed `a` throughout, both pads' `.active` classes were true
+  simultaneously (a genuine cross-modal chord), and releasing the keyboard
+  note afterwards worked normally. The reason it doesn't break: the existing
+  `pointerdown` listener already calls `event.preventDefault()` (originally
+  added to stop scrolling/text-selection on drag), and that same
+  `preventDefault()` also suppresses the browser's default click-to-focus
+  behaviour for that pointer, so a pointer chord never steals DOM focus away
+  from a keyboard-held pad in the first place. Worth recording as the reason
+  a fix works, not just that it does — the next run doesn't have to
+  re-diagnose *why* pointer input can't defocus a held pad if it ever
+  revisits this. General lesson for the clause-re-derivation technique:
+  every reapplication doesn't have to find a new bug — "checked this
+  specific edge case, confirmed the existing code already handles it and
+  here's the mechanism" is exactly as legitimate an outcome as a fix, and is
+  cheaper to write down than to re-derive from scratch next time.
 
 ## Open threads for future runs
 
@@ -790,7 +812,14 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   currently is, not the pad focused at keydown. Fixed with a `focusout`
   listener, pushed (`3bbf17a`/`99b75db`). Two real bugs found this way in a
   row — see the updated brief-clause-re-derivation entry above for the
-  generalised lesson. Not the last run.
+  generalised lesson. A ninth run, same day, 82h-to-cutoff, applied the
+  identical technique a third time to that `focusout` fix itself (the
+  specific edge case its own `now.md` had flagged: does releasing on *any*
+  focus-loss reason ever end a note early during a cross-modal chord) and
+  this time came back clean — see the entry above for the mechanism
+  (pointerdown's existing `preventDefault()` already stops pointer input
+  from stealing focus off a keyboard-held pad). No code change, no commit.
+  Not the last run.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
