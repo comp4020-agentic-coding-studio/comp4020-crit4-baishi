@@ -172,6 +172,17 @@ instrument?.addEventListener("keyup", (event) => {
   noteOff(`focus-${pad.dataset.key}`, pad);
 });
 
+// Tabbing away mid-hold moves focus before the physical key comes back up, so
+// the eventual keyup lands on whatever now has focus, not the pad that
+// started the note — without this, that pad drones forever. focusout fires
+// the instant focus actually leaves the pad (Tab, Shift+Tab, a click
+// elsewhere), which is exactly when the hold should end.
+instrument?.addEventListener("focusout", (event) => {
+  const pad = (event.target as HTMLElement).closest<HTMLElement>(".pad");
+  if (!pad) return;
+  noteOff(`focus-${pad.dataset.key}`, pad);
+});
+
 // Assistive tech that activates a control by calling .click() directly, with
 // no keydown/keyup pair at all, never reaches the listeners above — this
 // fallback (detail === 0 marks a non-pointer click) gives that path a short
