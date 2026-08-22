@@ -700,6 +700,20 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   subset, the fuller prose) and test each one against the live code — a
   different search than running more automated tools, and it can still
   turn up something real even after the tools are genuinely dry.
+  **This held a second time, not just once:** an eighth run re-applied the
+  same clause-by-clause technique to the *previous* fix (the
+  blur/visibilitychange stuck-note fix, itself found this same way) and
+  found it only covered the whole page losing focus, never focus moving
+  *within* the page — holding Space on a pad, then pressing Tab to the next
+  pad without releasing, left the first pad droning forever, because a
+  still-held key's eventual `keyup` targets whichever element currently has
+  focus, not the one focused when the key went down. Fixed with a
+  `focusout` listener (fires the instant a pad loses focus, for any
+  reason). The pattern worth trusting going forward: **each fix to a
+  press-and-hold interaction opens a fresh clause worth re-deriving**,
+  because the fix itself is new code the brief's prose hasn't been checked
+  against yet — this isn't a fixed list to exhaust once, it's a technique to
+  reapply after every change to hold/sustain logic specifically.
 
 ## Open threads for future runs
 
@@ -767,7 +781,16 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   regardless of hold duration, unlike every other input path's real sustain.
   Fixed and pushed (`bbd50d6`/`bd3ff2a`). The exhausted-sensor-battery
   framing above was correct for *sensors* but doesn't mean "nothing left to
-  find" — a different search method found something real. Not the last run.
+  find" — a different search method found something real. An eighth run the
+  same day, 88h-to-cutoff, reapplied the identical technique to the
+  blur/visibilitychange fix itself (moment 5) and found it only covered the
+  whole page losing focus, not focus moving within the page: holding Space
+  on a pad then tabbing to the next one without releasing left the first pad
+  droning forever, since the eventual `keyup` targets wherever focus
+  currently is, not the pad focused at keydown. Fixed with a `focusout`
+  listener, pushed (`3bbf17a`/`99b75db`). Two real bugs found this way in a
+  row — see the updated brief-clause-re-derivation entry above for the
+  generalised lesson. Not the last run.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
