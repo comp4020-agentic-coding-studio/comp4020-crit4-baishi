@@ -157,6 +157,24 @@ og:image size
    activates via a bare `.click()` with no key events at all
    ([`bbd50d6`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/bbd50d6)).
 
+7. **Tabbing away mid-hold left the pad you tabbed *from* droning forever.**
+   Moment 5's blur/visibilitychange fix covers the whole page losing focus
+   (alt-tab); it never asked what happens when focus moves *within* the
+   page while a key is still physically down. Confirmed live: focus a pad,
+   dispatch a real `keydown` for Space to start the hold, then press Tab to
+   move focus to the next pad, then dispatch the matching `keyup` on
+   whichever element focus actually landed on — exactly what a real browser
+   does, since a still-held key's `keyup` always targets the *currently*
+   focused element, not the one focused when the key went down. The first
+   pad stayed `active` with no way to release it, because its `keyup` never
+   arrived at all. Fixed with a `focusout` listener, which fires the instant
+   focus actually leaves a pad (Tab, Shift+Tab, or a click elsewhere) and
+   releases that pad's note right then, regardless of where the physical key
+   eventually comes up. Re-verified the fix releases the tabbed-from pad
+   immediately at both marking viewports, and that an ordinary in-place
+   press-then-release on one pad is unaffected
+   ([`3bbf17a`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/3bbf17a)).
+
 ## Still open
 
 Whether eight pads over one octave-and-change is the right range, or whether
