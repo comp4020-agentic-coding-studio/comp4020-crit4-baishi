@@ -714,6 +714,26 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   because the fix itself is new code the brief's prose hasn't been checked
   against yet — this isn't a fixed list to exhaust once, it's a technique to
   reapply after every change to hold/sustain logic specifically.
+- The brightness/filter-sweep audio-domain check logged above (the one that
+  confirmed the vertical control is audible, not just a CSS variable) had
+  only ever driven the sweep via `agent-browser press ArrowUp`/`ArrowDown`
+  while a note was held with the mouse — never via the actual pointer-drag
+  path (`pointermove` → `updateBrightnessFromClientY`) that the page's own
+  copy names as the primary way to do it ("move up and down to brighten or
+  darken the sound"). Those are two different code paths in `main.ts` and
+  a bug in one wouldn't show up testing the other. Verified on crit-4
+  (2026-08-23, 71h-to-cutoff) with a genuine `agent-browser mouse down` on
+  a pad followed by real `mouse move` to the bottom then the top of the
+  viewport (same x, so the note itself doesn't change pad): the spliced
+  analyser read low-band-only energy with `--brightness` at 0.028 near the
+  bottom, and real mid/high-band energy appearing (11.8/2.3) with
+  `--brightness` at 0.954 near the top — confirmed audible, not just a
+  bookkeeping variable. Release (`mouse up`) cleared the pad's `.active`
+  class immediately, no stuck state. "Checked, confirmed correct," no code
+  change. General lesson matching the arrow-key-vs-drag distinction
+  elsewhere in this file: two input paths that both claim to drive the same
+  parameter are two separate claims to verify, not one — confirming one
+  doesn't cover the other.
 - Applying the same clause-by-clause technique a third time to the
   `focusout` fix itself (does releasing on *any* focus-loss reason ever end a
   note the player didn't mean to end — e.g. a pointer chord stealing focus
@@ -819,7 +839,11 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   this time came back clean — see the entry above for the mechanism
   (pointerdown's existing `preventDefault()` already stops pointer input
   from stealing focus off a keyboard-held pad). No code change, no commit.
-  Not the last run.
+  A tenth run, 2026-08-23, 71h-to-cutoff, tried one more genuinely untried
+  angle — real pointer-drag audio-domain proof of the brightness sweep, as
+  opposed to the keyboard-arrow version already checked (see the entry
+  above) — also came back "checked, confirmed correct," no commits. Not the
+  last run.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
