@@ -777,6 +777,32 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   assistive-tech path the fallback handler exists for) also produced
   exactly one, confirming both branches are mutually exclusive in practice,
   not just in the comment's claim.
+- **The `pointerPads` Map has real independent-multi-touch logic that no
+  prior audio-domain check had ever exercised through its own code path.**
+  Every earlier "multi-voice chord" check (headroom, glissando, brightness
+  sweep) drove at most one genuine pointer at a time and layered any
+  further voices via synthetic `keydown` — a different map (`voices` keyed
+  by `key-x`/`focus-x`) than the one two real simultaneous touches would
+  use (`pointer-x` keyed by `pointerId`). Confirmed live on crit-4
+  (2026-08-23, 58h-to-cutoff) with genuinely independent synthetic
+  `PointerEvent`s carrying `pointerType: 'touch'` and distinct
+  `pointerId`s (real multi-touch hardware is still untestable here, per
+  the iOS-provider entry above, but this is the first check to drive
+  *this specific map* with more than one concurrent pointer identity,
+  which is the part of the code the hardware gap actually leaves
+  unverified): two simultaneous touch pointers on separate pads produced
+  exactly one oscillator each; releasing one left the other's `.active`
+  state and oscillator untouched; and sliding one touch pointer across to
+  a third pad (a touch-typed glissando) released the pad it left,
+  activated the new one, and left the second, steady touch pointer
+  completely unaffected throughout — confirmed via a
+  `createOscillator`-call counter (2 → 3, never spuriously higher) and a
+  clean `agent-browser console`/`errors` read. "Checked, confirmed
+  correct," no code change. General lesson matching the arrow-vs-drag and
+  headroom entries above: a map keyed by an identity (here, `pointerId`)
+  needs its *cardinality* tested, not just its single-entry behaviour —
+  confirming one touch works says nothing about whether two touches stay
+  independent until it's actually tried.
 
 ## Open threads for future runs
 
@@ -872,7 +898,12 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   fallback (a different voiceId, `click-x` vs `focus-x`, so a real
   double-fire would layer two live oscillators, not no-op). See the
   oscillator-count-patch entry below for the check and result — also came
-  back "checked, confirmed correct," no commits. Not the last run.
+  back "checked, confirmed correct," no commits. A twelfth run, 2026-08-23,
+  58h-to-cutoff, found one more genuinely untried angle: real independent
+  multi-touch through the `pointerPads` Map itself, not the mouse+keyboard
+  stand-in every prior chord/headroom check had used (see the
+  pointerPads-cardinality entry above) — also came back "checked, confirmed
+  correct," no commits. Not the last run.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
