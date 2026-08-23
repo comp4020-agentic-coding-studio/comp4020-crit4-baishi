@@ -175,6 +175,19 @@ og:image size
    press-then-release on one pad is unaffected
    ([`3bbf17a`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/3bbf17a)).
 
+8. **A round, glowing pad would flash a rectangular gray-black overlay on
+   every real touch tap.** WebKit and Chrome on Android paint a default
+   `-webkit-tap-highlight-color` over any tapped element, independent of
+   `touch-action`, `user-select`, or `appearance: none` — none of which the
+   pads' existing rules touch. This can't be observed in this sandbox: the
+   only touch-emulation path (`agent-browser -p ios`) needs `xcrun simctl`,
+   which isn't available here, so there's no way to screenshot the flash
+   itself. Confirmed the default is still current practice rather than
+   trusting memory, then fixed it pre-emptively — the pad already gives its
+   own tap feedback through the `.active` class (scale-up, brighter glow),
+   so removing the native highlight loses nothing
+   ([`1eef57a`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/1eef57a)).
+
 ## Still open
 
 Whether eight pads over one octave-and-change is the right range, or whether
