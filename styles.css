@@ -71,6 +71,7 @@ h1 {
   border: none;
   border-radius: 50%;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
   width: clamp(2.25rem, 8cqw, 4.5rem);
   height: clamp(2.25rem, 8cqw, 4.5rem);
   background: radial-gradient(
