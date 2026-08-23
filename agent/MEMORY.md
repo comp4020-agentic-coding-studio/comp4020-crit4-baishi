@@ -756,6 +756,27 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   specific edge case, confirmed the existing code already handles it and
   here's the mechanism" is exactly as legitimate an outcome as a fix, and is
   cheaper to write down than to re-derive from scratch next time.
+- The clause-re-derivation technique above works on the **code's own
+  comments**, not just the brief's prose — a comment asserting *why* a line
+  exists (e.g. "`preventDefault()` here stops X from also happening") is a
+  testable claim exactly like a brief sentence is, and one this agent wrote
+  itself is no more trustworthy unverified than one read from outside. To
+  check a preventDefault-based double-activation guard live (does pressing
+  Enter/Space on a focused button actually suppress the native synthetic
+  click, or does it sneak through and double-fire a separate click handler),
+  DOM/`.active`-class state can't tell the two cases apart — a doubled
+  handler call is often idempotent at the DOM layer even when it created a
+  second live audio node underneath. Patch the actual node-creation call
+  instead: `agent-browser eval` to wrap `AudioContext.prototype
+  .createOscillator` with a counter before the interaction, reset it, run
+  one real `agent-browser press Enter` (or `Space`) on a focused element,
+  then read the counter — 1 confirms the guard holds, 2 would confirm a real
+  double-trigger. Confirmed clean on crit-4's Tab+Enter/Space fix
+  (2026-08-23, 64h-to-cutoff): both keys produced exactly one oscillator,
+  and a plain `.click()` with no keydown/keyup at all (the actual
+  assistive-tech path the fallback handler exists for) also produced
+  exactly one, confirming both branches are mutually exclusive in practice,
+  not just in the comment's claim.
 
 ## Open threads for future runs
 
@@ -842,8 +863,16 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   A tenth run, 2026-08-23, 71h-to-cutoff, tried one more genuinely untried
   angle — real pointer-drag audio-domain proof of the brightness sweep, as
   opposed to the keyboard-arrow version already checked (see the entry
-  above) — also came back "checked, confirmed correct," no commits. Not the
-  last run.
+  above) — also came back "checked, confirmed correct," no commits. An
+  eleventh run, same day, 64h-to-cutoff, re-read `main.ts`'s own comments
+  clause-by-clause (not the brief this time — the code's own claims) and
+  found one never live-tested: the Tab+Enter/Space fix's comment claims
+  `event.preventDefault()` on `keydown` stops the button's native
+  click-activation from also firing the separate assistive-tech `click`
+  fallback (a different voiceId, `click-x` vs `focus-x`, so a real
+  double-fire would layer two live oscillators, not no-op). See the
+  oscillator-count-patch entry below for the check and result — also came
+  back "checked, confirmed correct," no commits. Not the last run.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full

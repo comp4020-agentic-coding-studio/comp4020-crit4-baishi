@@ -7,9 +7,31 @@ deliverable: comp4020-crit4-baishi
 
 ## State
 
-This run's prompt named `comp4020-crit4-baishi`, 71h to cutoff — still
-mid-week (deepening, not the last run). Arrived clean at `6026a49`, `pnpm
+This run's prompt named `comp4020-crit4-baishi`, 64h to cutoff — still
+mid-week (deepening, not the last run). Arrived clean at `15be0e7`, `pnpm
 check` green, working tree clean, up to date with `origin/main`.
+
+Re-read `main.ts`'s own comments clause-by-clause (the technique that found
+the last two real bugs) looking for an unverified claim. Found one: the
+`keydown` handler for Tab-focused Enter/Space activation calls
+`event.preventDefault()` specifically to stop the button's native
+click-activation from *also* firing and double-triggering `noteOn` via the
+separate assistive-tech `click` fallback (`click-${key}` is a different
+voiceId than `focus-${key}`, so a double-fire would layer two live
+oscillators rather than no-op). That claim had only ever been asserted in
+the comment, never exercised with a real keyboard press.
+
+Verified live against `CI=true pnpm preview --port 4501`: patched
+`AudioContext.prototype.createOscillator` to count calls, focused a pad,
+then sent genuine `agent-browser press Enter` and (separately) `press
+Space` — both produced exactly 1 oscillator, confirming `preventDefault()`
+on `keydown` does suppress the native synthetic click in this real browser,
+so no double-trigger. Also checked the fallback path itself still works
+in isolation: a plain `.click()` with no keydown/keyup at all (the actual
+assistive-tech case the fallback exists for) created exactly 1 oscillator,
+marked the pad `.active` immediately, and cleared it again after the 180ms
+blip. Console stayed clean throughout. "Checked, confirmed correct" — no
+bug, no code change, no commit. Preview server shut down cleanly after.
 
 Re-fetched the brief and found one genuinely untried angle among the two
 `now.md` had flagged: the page's own copy ("move up and down to brighten or
@@ -48,16 +70,17 @@ Shut down the preview server cleanly afterwards.
 
 ## Next action
 
-Ten runs deep on this repo now across the full technical battery
+Eleven runs deep on this repo now across the full technical battery
 (axe-core, html-validate, Lighthouse, CWV, keyboard tab-order,
-audio-liveness/pitch/multi-voice-headroom, and now both brightness-sweep
-input paths) plus three rounds of brief clause-by-clause re-derivation
-(two real bugs found, two clean checks). Genuinely untried self-administrable
-angles are getting scarce. Options for a future run, in rough order of
-how likely they are to be new ground:
-- One more careful brief re-read against whatever the code looks like by
-  then — it keeps changing as fixes land, so a clause that was fine last
-  time can regress.
+audio-liveness/pitch/multi-voice-headroom, both brightness-sweep input
+paths, and now the Enter/Space-vs-click double-trigger guard) plus four
+rounds of brief/code clause-by-clause re-derivation (two real bugs found,
+three clean checks). Genuinely untried self-administrable angles are
+getting very scarce. Options for a future run, in rough order of how
+likely they are to be new ground:
+- One more careful brief/code re-read against whatever the code looks
+  like by then — it keeps changing as fixes land, so a clause that was
+  fine last time can regress.
 - The one substantive open thread that isn't self-administrable: whether 8
   pads / a bit over one octave is the right range for "a stranger plays it
   uninstructed" needs a real stranger's reaction — the studio crit itself.
