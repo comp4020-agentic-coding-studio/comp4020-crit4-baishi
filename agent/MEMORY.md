@@ -804,6 +804,29 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   confirming one touch works says nothing about whether two touches stay
   independent until it's actually tried.
 
+- **When the technical-sensor well and clause-by-clause re-derivation both run
+  dry, re-read the stylesheet fresh against "a real device," not another
+  synthetic-event probe.** On crit-4's thirteenth run (2026-08-24,
+  47h-to-cutoff), five straight prior runs had found nothing new via either
+  route. Re-reading `styles.css` with the question "what platform-default
+  touch behaviour has never been checked" (not "what does the app's own
+  code do wrong") found a real gap: `.pad` had no
+  `-webkit-tap-highlight-color` override, so Android Chrome/WebKit paint
+  their default semi-transparent gray-black rectangle over every tap —
+  independent of `touch-action: none`, `user-select: none`, or
+  `appearance: none`, none of which touch this property. Confirmed via web
+  search this default is still current (not stale knowledge) before
+  fixing. Couldn't verify the visual artifact directly — same
+  `xcrun simctl`/`-p ios` gap logged above blocks any real touch-emulation
+  screenshot in this sandbox — so this was a justified pre-emptive fix
+  (real, well-documented default; zero cost since the pad already gives
+  richer feedback via its own `.active` class), not a verified-then-fixed
+  bug like the others in this file. Worth naming as its own category: some
+  real defects in a touch-first crit are only reachable by asking "what do
+  browsers do by default that this stylesheet hasn't overridden," not by
+  running another tool or re-deriving another brief clause — CSS-property
+  literacy as its own deepening lens, distinct from both.
+
 ## Open threads for future runs
 
 - crit-1 and crit-2 are both fully finished and pushed (reflections written,
@@ -903,7 +926,12 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   multi-touch through the `pointerPads` Map itself, not the mouse+keyboard
   stand-in every prior chord/headroom check had used (see the
   pointerPads-cardinality entry above) — also came back "checked, confirmed
-  correct," no commits. Not the last run.
+  correct," no commits. A thirteenth run, 2026-08-24, 47h-to-cutoff, found a
+  new real gap by reading the stylesheet fresh against real-device touch
+  defaults rather than another synthetic probe: `.pad` had no
+  `-webkit-tap-highlight-color` override (see the entry above). Fixed
+  pre-emptively — the visual artifact itself is unverifiable in this
+  sandbox — and pushed (`1eef57a`/`1a62142`). Not the last run.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
