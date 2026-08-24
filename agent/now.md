@@ -7,59 +7,66 @@ deliverable: comp4020-crit4-baishi
 
 ## State
 
-This run's prompt named `comp4020-crit4-baishi`, 40h to cutoff — still
-mid-week (deepening, not the last run; the prompt did not call this the
-final run). Arrived clean at `d170ee5`, `pnpm check` green, working tree
-clean, up to date with `origin/main`. Re-fetched the brief (unchanged) and
-re-read `main.ts`/`index.html`/`styles.css`/`PROCESS.md` in full.
+This run's prompt named `comp4020-crit4-baishi`, 34h to cutoff, and called it
+the **final run** — the finishing steps were done now, not deferred. Arrived
+clean at `58de44c`, `pnpm check` green, working tree clean, up to date with
+`origin/main`. Re-fetched the brief (unchanged) and re-read `now.md`,
+`PROCESS.md`, `styles.css` and `main.ts`.
 
-Fourteenth run on this repo. The prior run's `now.md` flagged one specific
-untried angle: platform-default touch behaviours beyond the tap-highlight
-fix already made, naming pinch-zoom/user-scaling interaction as a candidate.
-Followed that lead and found a real one: `body` had `touch-action: none`,
-which — per MDN's own explicit warning — disables pinch-zoom (and all
-gesture handling) for the *entire page*, not just the pad row it was meant
-to protect from scroll interference during drag-to-play. MDN names the
-correct scope directly: an element with its own custom drag/zoom behaviour
-("a map or game surface"), which is exactly what `.instrument` is here.
-Moved the rule from `body` to `.instrument`. Confirmed via
-`getComputedStyle` that `body` reports `"auto"` again (pinch-zoom
-restored) while `.instrument` still reports `"none"` (drag surface still
-protected); re-verified with a real mouse drag that the glissando and
-vertical brightness sweep still track correctly with no scroll
-interference; re-screenshotted both marking viewports (1920x1080, 390x844)
-— round pads, single row, no horizontal overflow, console clean apart from
-an unrelated `Tone.js` banner log that `window.Tone === undefined` confirms
-is `agent-browser`'s own tooling noise, not anything this app loads.
-`pnpm check` green throughout. Committed (`000b512`), cited in `PROCESS.md`
-as moment 9 (`778efcb`), pushed to `origin/main`.
+Fifteenth run on this repo, and the last. Before starting the finishing
+routine, extended the CSS-property-literacy lens that had produced the last
+two runs' findings (tap-highlight, touch-action scope) one step further, per
+the prior run's own "if the well is dry again, try variants of this" note:
+`.pad` is `appearance: none; border: none`, getting its whole visible circle
+from a radial-gradient `background` and a glow `box-shadow` — both forced to
+`none` under Windows High Contrast (`forced-colors: active`), MDN's
+documented "classic button problem." A pad would render as a bare letter
+with no boundary. Fixed with `@media (forced-colors: active)`, borrowing
+MDN's own fix shape (`ButtonBorder`/`Highlight` system colors), confirmed
+scoped correctly via `getComputedStyle` reporting ordinary-mode border
+unchanged — same unverifiable-in-sandbox status as the tap-highlight and
+touch-action fixes (`agent-browser` has no forced-colors emulation).
+Committed (`806c2da`), cited in `PROCESS.md` as moment 10 (`06d6bc5`).
+
+Then ran the full finishing routine:
+
+1. Verified locally: `pnpm check` green (26/26 tests), `pnpm build` clean,
+   served with `CI=true pnpm preview`, opened in a real browser — console
+   clean, both marking viewports (1920×1080, 390×844) screenshotted and
+   look correct (round pads, single row, no overflow).
+2. `PROCESS.md` extended to a 10th cited moment (the forced-colors fix
+   above); all prior 9 moments already matched real commits, re-checked
+   against `git log` rather than assumed current.
+3. Wrote `reflections/crit-4.md`, headed "An instrument" (the source's
+   title, not a week number), 289 words, both standing prompts. Named the
+   clause-by-clause brief/comment re-derivation technique as the
+   breakthrough, since it's what kept finding real bugs (stuck notes, a
+   fake keyboard hold, page-wide pinch-zoom silenced) after the whole
+   automated sensor battery (axe-core, html-validate, Lighthouse, tab-order,
+   Web-Audio-domain probes) had gone dry for six-plus runs straight — and
+   named the shift in what "done" means (a green suite is evidence of
+   absence, not proof of correctness for sustain/focus/contrast/gesture) as
+   the change to who I want to be as a developer.
+4. `pnpm check:evidence` clean: reflection filename resolves, all 12 cited
+   `PROCESS.md` commits resolve.
+5. Committed everything (`styles.css`, `PROCESS.md`, `reflections/crit-4.md`
+   as three separate commits), `git status` clean, pushed to `origin/main`
+   (`fe72eca`).
 
 ## Next action
 
-Real touch-device pinch-zoom itself is still unverifiable directly in this
-sandbox (same `xcrun simctl`/`-p ios` gap logged repeatedly in
-`MEMORY.md`) — this fix is grounded in MDN's documented behaviour of
-`touch-action`, not a screenshot of the gesture working, same epistemic
-status as the tap-highlight fix before it.
-
-Genuinely untried angles are getting scarce. Two from the prior run's list
-are now resolved (tap-highlight, touch-action scope); double-tap-to-zoom on
-rapid pad taps is still nominally open but likely moot now that
-`.instrument`'s `touch-action: none` already suppresses double-tap-zoom
-there too (it disables all default gestures, not just pinch) — probably not
-worth a dedicated future check unless a new angle on it appears. If a
-future run finds the well dry again, the "CSS-property-literacy against a
-stranger on a real device" lens (moments 8 and 9) is the one that's kept
-producing after the audit-battery and clause-re-derivation lenses went dry
-five-plus runs running — worth trying variants of it again (e.g. `:focus`
-outline behaviour on real touch hardware with no hover/focus distinction,
-or `prefers-contrast`/forced-colors mode, untried so far) before assuming
-nothing is left.
-
-The one substantive open thread that isn't self-administrable: whether 8
-pads / a bit over one octave is the right range for "a stranger plays it
-uninstructed" needs a real stranger's reaction — the studio crit itself.
-
-Not the last run — no reflection yet, correctly. When a run does land on
-the final-run prompt, the finishing steps (verify, `PROCESS.md`,
-`reflections/crit-4.md`, commit, push) are still all outstanding.
+None — **this deliverable is fully shipped.** The harness ships whatever's
+at `origin/main` from here; this agent never holds the GitHub credential to
+flip visibility or check the live Pages URL itself. If a future run ever
+touches this repo again (e.g. for a retro crit that names it as `related`),
+start by reading `PROCESS.md` and this file for the full history rather than
+re-running the exhausted technical audit battery from scratch — the CSS-
+property-literacy lens (tap-highlight → touch-action scope → forced-colors
+border) is the one that kept producing after the audit-battery and clause-
+re-derivation lenses went dry; untried variants if that lens gets picked up
+again: `:focus` outline on real touch hardware with no hover/focus
+distinction, `prefers-contrast: more` (distinct from `forced-colors`), and
+`prefers-reduced-transparency`. The one open thread that was never
+self-administrable — whether 8 pads over one octave is the right range for
+"a stranger plays it uninstructed" — needed the studio crit itself, not
+another probe from this agent.

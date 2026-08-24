@@ -847,6 +847,33 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   note) rather than inventing a fresh angle — worth re-reading a prior
   run's stated next-action list before reaching for a brand new technique.
 
+- **A third instance of the CSS-property-literacy lens (see the tap-highlight
+  and touch-action entries above): `appearance: none; border: none` on a
+  custom-styled control is a specific, real gap under `forced-colors: active`
+  (Windows High Contrast mode), not just a theoretical one.** MDN documents
+  this as "the classic button problem" — `background-image` (gradients
+  included) and `box-shadow` are both forced to `none` in that mode, so any
+  element relying on either for its visible shape/boundary, rather than a
+  real `border`, effectively disappears. On crit-4's `.pad` (a round button
+  whose entire circle came from a radial-gradient background plus a glow
+  `box-shadow`, no border at all) this meant a pad would render as a bare
+  letter with no boundary under high contrast — found on the fifteenth and
+  final run (2026-08-24, 34h-to-cutoff) by extending the same "what does the
+  platform do by default that this stylesheet hasn't overridden" question one
+  step further than the tap-highlight/touch-action findings had gone. Fixed
+  with `@media (forced-colors: active) { .pad { border: ...ButtonBorder } }`
+  — MDN's own documented fix shape, using `ButtonBorder`/`Highlight` system
+  colors rather than fixed colors so it stays correct across a user's chosen
+  contrast theme. Same epistemic status as the other two: `agent-browser` has
+  no forced-colors emulation, so this is grounded in documented platform
+  behaviour, confirmed only by `getComputedStyle` showing the rule doesn't
+  leak into ordinary mode, not a screenshot of the failure or the fix. Any
+  future crit with a custom-styled interactive element (a button, a slider
+  thumb, a custom checkbox) that gets its shape from `background`/`box-shadow`
+  rather than a `border` should get this same check — grep the stylesheet for
+  `appearance: none` combined with `border: none` as the specific pattern to
+  look for.
+
 ## Open threads for future runs
 
 - crit-1 and crit-2 are both fully finished and pushed (reflections written,
@@ -958,7 +985,28 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   page-wide, not just on the pad row it was meant to protect (see the
   touch-action-scoping entry above). Scoped to `.instrument`, verified via
   `getComputedStyle` and a live mouse-drag re-check, pushed
-  (`000b512`/`778efcb`). Not the last run.
+  (`000b512`/`778efcb`). Not the last run. A fifteenth run, 2026-08-24,
+  34h-to-cutoff, was the final run: extended the same CSS-property-literacy
+  lens the prior two runs had found live in (the `now.md` handoff had
+  flagged `forced-colors`/`prefers-contrast` as untried variants) and found
+  one more real, unverifiable-in-sandbox gap of the same shape —
+  `.pad` is `appearance: none; border: none`, getting its whole visible
+  circle from a `background` gradient and `box-shadow`, both forced to
+  `none` under Windows High Contrast (`forced-colors: active`), so a pad
+  would render as a bare letter with no boundary. Fixed with a
+  `@media (forced-colors: active)` rule borrowing MDN's own documented
+  fix shape (a `ButtonBorder`/`Highlight` border), confirmed scoped
+  correctly via `getComputedStyle` reporting the ordinary-mode border
+  unchanged (`806c2da`). Then ran the full finishing routine: local
+  `pnpm check`/`check:evidence` green, both marking viewports
+  screenshotted and console-clean against a real `pnpm preview`,
+  `PROCESS.md` extended to a 10th cited moment (`06d6bc5`), wrote
+  `reflections/crit-4.md` (289 words, both standing prompts, naming the
+  clause-by-clause re-derivation technique as the breakthrough since it's
+  what kept finding real bugs after the automated sensor battery had gone
+  dry six-plus runs running), committed and pushed (`fe72eca`). This
+  deliverable is now **fully shipped** — this was the last run for
+  `comp4020-crit4-baishi`.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
