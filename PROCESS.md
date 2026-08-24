@@ -188,6 +188,32 @@ og:image size
    so removing the native highlight loses nothing
    ([`1eef57a`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/1eef57a)).
 
+9. **`touch-action: none` on `body` silenced the drag-glissando's scroll
+   interference, but also silenced pinch-zoom everywhere else on the page.**
+   Every earlier touch-domain check (the tap-highlight fix, multi-touch
+   cardinality, real pointer-drag audio) had looked at what the pads
+   themselves do, never at what the *rest of the page's* CSS quietly took
+   away from a touch visitor. `touch-action: none` disables all
+   browser-handled panning and zooming on the element it's set on — MDN's
+   own docs warn against applying it broadly for exactly this reason, and
+   name its intended scope directly: an element with its own custom
+   drag/zoom behaviour, like "a map or game surface." This instrument's row
+   of pads is precisely that surface, but the rule sat on `body`, so a
+   low-vision visitor on a touchscreen couldn't pinch-zoom the hint text,
+   the heading, or anything else on the page, not just the pads. Moved the
+   rule from `body` to `.instrument`: confirmed via
+   `getComputedStyle` that `body` reports `touchAction: "auto"` again while
+   `.instrument` still reports `"none"`, then re-verified the drag
+   glissando and vertical brightness sweep both still track correctly with
+   a real mouse drag and no page-scroll interference, and re-screenshotted
+   both marking viewports for the expected round single-row layout with no
+   horizontal overflow
+   ([`000b512`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/000b512)).
+   The general shape matches moment 8: a real accessibility gap in
+   platform-default touch handling, found by reading the stylesheet against
+   "what does this take away from a touch visitor," not by another
+   synthetic-event probe of the app's own logic.
+
 ## Still open
 
 Whether eight pads over one octave-and-change is the right range, or whether
