@@ -20,7 +20,6 @@ body {
     hsl(calc(var(--bg-hue) - 20) 60% 8%) 70%
   );
   transition: background 0.4s ease-out;
-  touch-action: none;
   user-select: none;
 }
 
@@ -57,6 +56,7 @@ h1 {
 
 .instrument {
   container-type: inline-size;
+  touch-action: none;
   display: flex;
   justify-content: center;
   align-items: flex-end;
