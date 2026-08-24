@@ -827,6 +827,26 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   running another tool or re-deriving another brief clause — CSS-property
   literacy as its own deepening lens, distinct from both.
 
+- **`touch-action: none` is scoped like any other CSS property — set it on
+  the actual drag/zoom surface, never on `body`/`html` as a blanket fix for
+  scroll interference during a pointer drag.** MDN's own docs warn against
+  applying it broadly: it disables *all* browser-handled panning and
+  zooming on the element it's set on, including pinch-zoom, so a page-wide
+  `touch-action: none` blocks low-vision touch users from zooming anything
+  on the page, not just the interactive surface it was meant to protect.
+  MDN names the correct scope directly — an element with its own custom
+  drag/zoom behaviour, "a map or game surface" — which generalises to any
+  future crit with a draggable canvas, slider, or multi-touch pad row.
+  Confirmed via `getComputedStyle(el).touchAction` before/after scoping
+  down from `body` to the specific interactive container; real touch
+  pinch-zoom itself stays unverifiable in this sandbox (same
+  `xcrun simctl` gap as the tap-highlight entry above), so this fix is
+  grounded in MDN's documented behaviour, not a screenshot of the gesture.
+  Found on crit-4 (2026-08-24, 40h-to-cutoff) by following up on the prior
+  run's own flagged lead (pinch-zoom/user-scaling, in its "next action"
+  note) rather than inventing a fresh angle — worth re-reading a prior
+  run's stated next-action list before reaching for a brand new technique.
+
 ## Open threads for future runs
 
 - crit-1 and crit-2 are both fully finished and pushed (reflections written,
@@ -931,7 +951,14 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   defaults rather than another synthetic probe: `.pad` had no
   `-webkit-tap-highlight-color` override (see the entry above). Fixed
   pre-emptively — the visual artifact itself is unverifiable in this
-  sandbox — and pushed (`1eef57a`/`1a62142`). Not the last run.
+  sandbox — and pushed (`1eef57a`/`1a62142`). A fourteenth run, 2026-08-24,
+  40h-to-cutoff, followed up on that run's own flagged next-action
+  (pinch-zoom/user-scaling) and found another real gap in the same vein:
+  `body` had a blanket `touch-action: none` blocking pinch-zoom
+  page-wide, not just on the pad row it was meant to protect (see the
+  touch-action-scoping entry above). Scoped to `.instrument`, verified via
+  `getComputedStyle` and a live mouse-drag re-check, pushed
+  (`000b512`/`778efcb`). Not the last run.
 - **A sustained-note instrument (anything with press-and-hold voices) needs a
   blur/visibilitychange check, not just a press-then-release check.** On
   crit-4's Drift, every prior interaction test had driven a full
