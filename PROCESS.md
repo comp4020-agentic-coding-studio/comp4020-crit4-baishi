@@ -214,6 +214,26 @@ og:image size
    "what does this take away from a touch visitor," not by another
    synthetic-event probe of the app's own logic.
 
+10. **A pad would render as a bare letter under Windows High Contrast mode,
+    with no circle at all.** `.pad` is `appearance: none; border: none`,
+    getting its whole visible shape from a radial-gradient `background` and
+    a `box-shadow` glow. Both are forced to `none` under `forced-colors:
+    active` — the same "classic button problem" MDN documents: a button
+    that gets its contrast from `box-shadow` loses it entirely once forced
+    colors strip that property, leaving nothing to mark its boundary.
+    `agent-browser` has no forced-colors emulation to screenshot the
+    failure directly, so this is grounded in MDN's documented behaviour
+    (background-image and box-shadow forced to `none`; borders keep working
+    and pick up system colors) rather than a verified-then-fixed bug — the
+    same epistemic status as moments 8 and 9. Added a
+    `@media (forced-colors: active)` rule giving `.pad` a `ButtonBorder`
+    border, switching to `Highlight` while `.active` (the scale/glow
+    feedback the pad already gives on press still works too, since
+    `transform` isn't touched by forced colors), confirmed the rule is
+    scoped correctly by reading `getComputedStyle(...).border` back as
+    `0px none` in ordinary (non-forced-colors) mode
+    ([`806c2da`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-baishi/commit/806c2da)).
+
 ## Still open
 
 Whether eight pads over one octave-and-change is the right range, or whether
